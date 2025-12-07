@@ -357,4 +357,310 @@ describe('GestureEngine', () => {
       );
     });
   });
+
+  describe('手势识别', () => {
+    // 创建带有特定手指状态的手部关键点
+    function createGestureLandmarks(
+      thumbExtended: boolean,
+      indexExtended: boolean,
+      middleExtended: boolean,
+      ringExtended: boolean,
+      pinkyExtended: boolean
+    ): Vector3[] {
+      const landmarks: Vector3[] = [];
+      const wristX = 0.5;
+      const wristY = 0.6;
+      
+      // 初始化所有 21 个关键点
+      for (let i = 0; i < 21; i++) {
+        landmarks.push({ x: wristX, y: wristY, z: 0 });
+      }
+      
+      // 手腕 (0)
+      landmarks[0] = { x: wristX, y: wristY, z: 0 };
+      
+      // 大拇指 (1-4)
+      const thumbBaseX = wristX - 0.08;
+      landmarks[1] = { x: thumbBaseX, y: wristY - 0.02, z: 0 };
+      landmarks[2] = { x: thumbBaseX - 0.03, y: wristY - 0.05, z: 0 };
+      landmarks[3] = { x: thumbBaseX - 0.05, y: wristY - 0.08, z: 0 };
+      if (thumbExtended) {
+        landmarks[4] = { x: thumbBaseX - 0.08, y: wristY - 0.10, z: 0 };
+      } else {
+        landmarks[4] = { x: thumbBaseX - 0.02, y: wristY - 0.06, z: 0 };
+      }
+      
+      // 食指 (5-8)
+      const indexBaseX = wristX - 0.04;
+      landmarks[5] = { x: indexBaseX, y: wristY - 0.12, z: 0 };
+      if (indexExtended) {
+        landmarks[6] = { x: indexBaseX, y: wristY - 0.18, z: 0 };
+        landmarks[7] = { x: indexBaseX, y: wristY - 0.22, z: 0 };
+        landmarks[8] = { x: indexBaseX, y: wristY - 0.26, z: 0 };
+      } else {
+        landmarks[6] = { x: indexBaseX, y: wristY - 0.15, z: 0 };
+        landmarks[7] = { x: indexBaseX + 0.02, y: wristY - 0.13, z: 0 };
+        landmarks[8] = { x: indexBaseX + 0.03, y: wristY - 0.11, z: 0 };
+      }
+      
+      // 中指 (9-12)
+      const middleBaseX = wristX;
+      landmarks[9] = { x: middleBaseX, y: wristY - 0.12, z: 0 };
+      if (middleExtended) {
+        landmarks[10] = { x: middleBaseX, y: wristY - 0.19, z: 0 };
+        landmarks[11] = { x: middleBaseX, y: wristY - 0.24, z: 0 };
+        landmarks[12] = { x: middleBaseX, y: wristY - 0.28, z: 0 };
+      } else {
+        landmarks[10] = { x: middleBaseX, y: wristY - 0.15, z: 0 };
+        landmarks[11] = { x: middleBaseX + 0.02, y: wristY - 0.13, z: 0 };
+        landmarks[12] = { x: middleBaseX + 0.03, y: wristY - 0.11, z: 0 };
+      }
+      
+      // 无名指 (13-16)
+      const ringBaseX = wristX + 0.04;
+      landmarks[13] = { x: ringBaseX, y: wristY - 0.11, z: 0 };
+      if (ringExtended) {
+        landmarks[14] = { x: ringBaseX, y: wristY - 0.17, z: 0 };
+        landmarks[15] = { x: ringBaseX, y: wristY - 0.21, z: 0 };
+        landmarks[16] = { x: ringBaseX, y: wristY - 0.25, z: 0 };
+      } else {
+        landmarks[14] = { x: ringBaseX, y: wristY - 0.14, z: 0 };
+        landmarks[15] = { x: ringBaseX + 0.02, y: wristY - 0.12, z: 0 };
+        landmarks[16] = { x: ringBaseX + 0.03, y: wristY - 0.10, z: 0 };
+      }
+      
+      // 小指 (17-20)
+      const pinkyBaseX = wristX + 0.07;
+      landmarks[17] = { x: pinkyBaseX, y: wristY - 0.10, z: 0 };
+      if (pinkyExtended) {
+        landmarks[18] = { x: pinkyBaseX, y: wristY - 0.14, z: 0 };
+        landmarks[19] = { x: pinkyBaseX, y: wristY - 0.17, z: 0 };
+        landmarks[20] = { x: pinkyBaseX, y: wristY - 0.20, z: 0 };
+      } else {
+        landmarks[18] = { x: pinkyBaseX, y: wristY - 0.12, z: 0 };
+        landmarks[19] = { x: pinkyBaseX + 0.02, y: wristY - 0.10, z: 0 };
+        landmarks[20] = { x: pinkyBaseX + 0.03, y: wristY - 0.09, z: 0 };
+      }
+      
+      return landmarks;
+    }
+
+    // 创建手指比心手势的关键点（食指和大拇指指尖靠近形成心形）
+    function createFingerHeartLandmarks(): Vector3[] {
+      const landmarks: Vector3[] = [];
+      const wristX = 0.5;
+      const wristY = 0.6;
+      
+      // 初始化所有 21 个关键点
+      for (let i = 0; i < 21; i++) {
+        landmarks.push({ x: wristX, y: wristY, z: 0 });
+      }
+      
+      // 手腕 (0)
+      landmarks[0] = { x: wristX, y: wristY, z: 0 };
+      
+      // 大拇指 (1-4) - 伸展状态，指尖靠近食指尖
+      landmarks[1] = { x: wristX - 0.08, y: wristY - 0.02, z: 0 };
+      landmarks[2] = { x: wristX - 0.10, y: wristY - 0.06, z: 0 };
+      landmarks[3] = { x: wristX - 0.08, y: wristY - 0.12, z: 0 };
+      landmarks[4] = { x: wristX - 0.04, y: wristY - 0.20, z: 0 }; // 拇指尖，远离手腕
+      
+      // 食指 (5-8) - 伸展状态，指尖靠近拇指尖
+      // 确保 tip.y < pip.y < mcp.y 以被检测为伸展
+      landmarks[5] = { x: wristX - 0.04, y: wristY - 0.12, z: 0 }; // MCP
+      landmarks[6] = { x: wristX - 0.04, y: wristY - 0.18, z: 0 }; // PIP
+      landmarks[7] = { x: wristX - 0.04, y: wristY - 0.22, z: 0 }; // DIP
+      landmarks[8] = { x: wristX - 0.04, y: wristY - 0.24, z: 0 }; // TIP - 最小的 y 值
+      
+      // 中指 (9-12) - 收起状态
+      landmarks[9] = { x: wristX, y: wristY - 0.12, z: 0 };
+      landmarks[10] = { x: wristX, y: wristY - 0.15, z: 0 };
+      landmarks[11] = { x: wristX + 0.02, y: wristY - 0.13, z: 0 };
+      landmarks[12] = { x: wristX + 0.03, y: wristY - 0.11, z: 0 };
+      
+      // 无名指 (13-16) - 收起状态
+      landmarks[13] = { x: wristX + 0.04, y: wristY - 0.11, z: 0 };
+      landmarks[14] = { x: wristX + 0.04, y: wristY - 0.14, z: 0 };
+      landmarks[15] = { x: wristX + 0.06, y: wristY - 0.12, z: 0 };
+      landmarks[16] = { x: wristX + 0.07, y: wristY - 0.10, z: 0 };
+      
+      // 小指 (17-20) - 收起状态
+      landmarks[17] = { x: wristX + 0.07, y: wristY - 0.10, z: 0 };
+      landmarks[18] = { x: wristX + 0.07, y: wristY - 0.12, z: 0 };
+      landmarks[19] = { x: wristX + 0.09, y: wristY - 0.10, z: 0 };
+      landmarks[20] = { x: wristX + 0.10, y: wristY - 0.09, z: 0 };
+      
+      return landmarks;
+    }
+
+    it('should recognize open hand gesture (五指张开)', () => {
+      const landmarks = createGestureLandmarks(true, true, true, true, true);
+      const gesture = engine.detectGesture(landmarks);
+      expect(gesture).toBe(GestureType.OPEN_HAND);
+    });
+
+    it('should recognize scissors gesture (剪刀手 - 食指和中指伸展)', () => {
+      const landmarks = createGestureLandmarks(false, true, true, false, false);
+      const gesture = engine.detectGesture(landmarks);
+      expect(gesture).toBe(GestureType.SCISSORS);
+    });
+
+    it('should recognize fist gesture (握拳 - 所有手指收起)', () => {
+      const landmarks = createGestureLandmarks(false, false, false, false, false);
+      const gesture = engine.detectGesture(landmarks);
+      expect(gesture).toBe(GestureType.FIST);
+    });
+
+    it('should recognize point gesture (食指 - 仅食指伸展)', () => {
+      const landmarks = createGestureLandmarks(false, true, false, false, false);
+      const gesture = engine.detectGesture(landmarks);
+      expect(gesture).toBe(GestureType.POINT);
+    });
+
+    it('should recognize thumbs up gesture (竖大拇指 - 仅大拇指伸展)', () => {
+      const landmarks = createGestureLandmarks(true, false, false, false, false);
+      const gesture = engine.detectGesture(landmarks);
+      expect(gesture).toBe(GestureType.THUMBS_UP);
+    });
+
+    it('should recognize finger heart gesture (手指比心 - 食指和大拇指形成心形)', () => {
+      const landmarks = createFingerHeartLandmarks();
+      const gesture = engine.detectGesture(landmarks);
+      expect(gesture).toBe(GestureType.FINGER_HEART);
+    });
+
+    it('should return NONE for insufficient landmarks', () => {
+      const landmarks: Vector3[] = [{ x: 0.5, y: 0.5, z: 0 }];
+      const gesture = engine.detectGesture(landmarks);
+      expect(gesture).toBe(GestureType.NONE);
+    });
+
+    it('should return NONE for unrecognized gesture', () => {
+      // 三指伸展（不是任何已定义的手势）
+      const landmarks = createGestureLandmarks(false, true, true, true, false);
+      const gesture = engine.detectGesture(landmarks);
+      expect(gesture).toBe(GestureType.NONE);
+    });
+  });
+
+  describe('手指状态分析', () => {
+    function createGestureLandmarks(
+      thumbExtended: boolean,
+      indexExtended: boolean,
+      middleExtended: boolean,
+      ringExtended: boolean,
+      pinkyExtended: boolean
+    ): Vector3[] {
+      const landmarks: Vector3[] = [];
+      const wristX = 0.5;
+      const wristY = 0.6;
+      
+      for (let i = 0; i < 21; i++) {
+        landmarks.push({ x: wristX, y: wristY, z: 0 });
+      }
+      
+      landmarks[0] = { x: wristX, y: wristY, z: 0 };
+      
+      const thumbBaseX = wristX - 0.08;
+      landmarks[1] = { x: thumbBaseX, y: wristY - 0.02, z: 0 };
+      landmarks[2] = { x: thumbBaseX - 0.03, y: wristY - 0.05, z: 0 };
+      landmarks[3] = { x: thumbBaseX - 0.05, y: wristY - 0.08, z: 0 };
+      if (thumbExtended) {
+        landmarks[4] = { x: thumbBaseX - 0.08, y: wristY - 0.10, z: 0 };
+      } else {
+        landmarks[4] = { x: thumbBaseX - 0.02, y: wristY - 0.06, z: 0 };
+      }
+      
+      const indexBaseX = wristX - 0.04;
+      landmarks[5] = { x: indexBaseX, y: wristY - 0.12, z: 0 };
+      if (indexExtended) {
+        landmarks[6] = { x: indexBaseX, y: wristY - 0.18, z: 0 };
+        landmarks[7] = { x: indexBaseX, y: wristY - 0.22, z: 0 };
+        landmarks[8] = { x: indexBaseX, y: wristY - 0.26, z: 0 };
+      } else {
+        landmarks[6] = { x: indexBaseX, y: wristY - 0.15, z: 0 };
+        landmarks[7] = { x: indexBaseX + 0.02, y: wristY - 0.13, z: 0 };
+        landmarks[8] = { x: indexBaseX + 0.03, y: wristY - 0.11, z: 0 };
+      }
+      
+      const middleBaseX = wristX;
+      landmarks[9] = { x: middleBaseX, y: wristY - 0.12, z: 0 };
+      if (middleExtended) {
+        landmarks[10] = { x: middleBaseX, y: wristY - 0.19, z: 0 };
+        landmarks[11] = { x: middleBaseX, y: wristY - 0.24, z: 0 };
+        landmarks[12] = { x: middleBaseX, y: wristY - 0.28, z: 0 };
+      } else {
+        landmarks[10] = { x: middleBaseX, y: wristY - 0.15, z: 0 };
+        landmarks[11] = { x: middleBaseX + 0.02, y: wristY - 0.13, z: 0 };
+        landmarks[12] = { x: middleBaseX + 0.03, y: wristY - 0.11, z: 0 };
+      }
+      
+      const ringBaseX = wristX + 0.04;
+      landmarks[13] = { x: ringBaseX, y: wristY - 0.11, z: 0 };
+      if (ringExtended) {
+        landmarks[14] = { x: ringBaseX, y: wristY - 0.17, z: 0 };
+        landmarks[15] = { x: ringBaseX, y: wristY - 0.21, z: 0 };
+        landmarks[16] = { x: ringBaseX, y: wristY - 0.25, z: 0 };
+      } else {
+        landmarks[14] = { x: ringBaseX, y: wristY - 0.14, z: 0 };
+        landmarks[15] = { x: ringBaseX + 0.02, y: wristY - 0.12, z: 0 };
+        landmarks[16] = { x: ringBaseX + 0.03, y: wristY - 0.10, z: 0 };
+      }
+      
+      const pinkyBaseX = wristX + 0.07;
+      landmarks[17] = { x: pinkyBaseX, y: wristY - 0.10, z: 0 };
+      if (pinkyExtended) {
+        landmarks[18] = { x: pinkyBaseX, y: wristY - 0.14, z: 0 };
+        landmarks[19] = { x: pinkyBaseX, y: wristY - 0.17, z: 0 };
+        landmarks[20] = { x: pinkyBaseX, y: wristY - 0.20, z: 0 };
+      } else {
+        landmarks[18] = { x: pinkyBaseX, y: wristY - 0.12, z: 0 };
+        landmarks[19] = { x: pinkyBaseX + 0.02, y: wristY - 0.10, z: 0 };
+        landmarks[20] = { x: pinkyBaseX + 0.03, y: wristY - 0.09, z: 0 };
+      }
+      
+      return landmarks;
+    }
+
+    it('should analyze all fingers extended', () => {
+      const landmarks = createGestureLandmarks(true, true, true, true, true);
+      const states = engine.analyzeFingerStates(landmarks);
+      
+      expect(states.index).toBe(true);
+      expect(states.middle).toBe(true);
+      expect(states.ring).toBe(true);
+      expect(states.pinky).toBe(true);
+    });
+
+    it('should analyze all fingers curled', () => {
+      const landmarks = createGestureLandmarks(false, false, false, false, false);
+      const states = engine.analyzeFingerStates(landmarks);
+      
+      expect(states.index).toBe(false);
+      expect(states.middle).toBe(false);
+      expect(states.ring).toBe(false);
+      expect(states.pinky).toBe(false);
+    });
+
+    it('should analyze mixed finger states', () => {
+      const landmarks = createGestureLandmarks(false, true, true, false, false);
+      const states = engine.analyzeFingerStates(landmarks);
+      
+      expect(states.index).toBe(true);
+      expect(states.middle).toBe(true);
+      expect(states.ring).toBe(false);
+      expect(states.pinky).toBe(false);
+    });
+
+    it('should return all false for insufficient landmarks', () => {
+      const landmarks: Vector3[] = [{ x: 0.5, y: 0.5, z: 0 }];
+      const states = engine.analyzeFingerStates(landmarks);
+      
+      expect(states.thumb).toBe(false);
+      expect(states.index).toBe(false);
+      expect(states.middle).toBe(false);
+      expect(states.ring).toBe(false);
+      expect(states.pinky).toBe(false);
+    });
+  });
 });
