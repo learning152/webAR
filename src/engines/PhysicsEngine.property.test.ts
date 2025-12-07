@@ -427,4 +427,250 @@ describe('PhysicsEngine Property-Based Tests', () => {
       { numRuns: 100 }
     );
   });
+
+  /**
+   * Feature: webar-particle-interaction, Property 8: 行星位置跟随手部
+   * Validates: Requirements 4.3
+   * 
+   * For any hand center position, the planet's center should move to that position.
+   * All particles should be translated by the same offset.
+   */
+  it('Property 8: planet position follows hand center', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 10, max: 1000 }), // particle count
+        fc.float({ min: Math.fround(0.5), max: Math.fround(5.0), noNaN: true }), // radius
+        fc.float({ min: Math.fround(-10), max: Math.fround(10), noNaN: true }), // hand center x
+        fc.float({ min: Math.fround(-10), max: Math.fround(10), noNaN: true }), // hand center y
+        fc.float({ min: Math.fround(-10), max: Math.fround(10), noNaN: true }), // hand center z
+        (count, radius, hx, hy, hz) => {
+          const engine = new PhysicsEngine();
+          engine.initialize(count);
+          
+          const particleData = engine.getParticleData()!;
+          
+          // Set up planet shape (sphere centered at origin)
+          for (let i = 0; i < count; i++) {
+            const idx = i * 3;
+            // Use Fibonacci sphere for uniform distribution
+            const goldenRatio = (1 + Math.sqrt(5)) / 2;
+            const angleIncrement = Math.PI * 2 * goldenRatio;
+            const t = i / count;
+            const inclination = Math.acos(1 - 2 * t);
+            const azimuth = angleIncrement * i;
+            
+            const x = radius * Math.sin(inclination) * Math.cos(azimuth);
+            const y = radius * Math.sin(inclination) * Math.sin(azimuth);
+            const z = radius * Math.cos(inclination);
+            
+            particleData.targetPositions[idx] = x;
+            particleData.targetPositions[idx + 1] = y;
+            particleData.targetPositions[idx + 2] = z;
+          }
+          
+          // Store original positions
+          engine.storeOriginalTargetPositions();
+          
+          // Update planet position to follow hand
+          const handCenter = { x: hx, y: hy, z: hz };
+          engine.updatePlanetPosition(handCenter);
+          
+          // Verify planet center moved to hand center
+          const planetCenter = engine.getPlanetCenter();
+          expect(planetCenter.x).toBeCloseTo(hx, 5);
+          expect(planetCenter.y).toBeCloseTo(hy, 5);
+          expect(planetCenter.z).toBeCloseTo(hz, 5);
+          
+          // Verify all particles are translated correctly
+          const originalPositions = engine.getOriginalTargetPositions()!;
+          for (let i = 0; i < count; i++) {
+            const idx = i * 3;
+            
+            // Get original and new target positions
+            const ox = originalPositions[idx];
+            const oy = originalPositions[idx + 1];
+            const oz = originalPositions[idx + 2];
+            
+            const tx = particleData.targetPositions[idx];
+            const ty = particleData.targetPositions[idx + 1];
+            const tz = particleData.targetPositions[idx + 2];
+            
+            // New position should be original + hand center offset
+            expect(tx).toBeCloseTo(ox + hx, 5);
+            expect(ty).toBeCloseTo(oy + hy, 5);
+            expect(tz).toBeCloseTo(oz + hz, 5);
+          }
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  /**
+   * Feature: webar-particle-interaction, Property 9: 行星旋转跟随手部
+   * Validates: Requirements 4.4, 16.2, 16.3
+   * 
+   * For any hand rotation angle, the planet should apply the same rotation transformation.
+   */
+  it('Property 9: planet rotation follows hand rotation', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 10, max: 500 }), // particle count
+        fc.float({ min: Math.fround(0.5), max: Math.fround(5.0), noNaN: true }), // radius
+        fc.float({ min: Math.fround(-Math.PI), max: Math.fround(Math.PI), noNaN: true }), // rotation x
+        fc.float({ min: Math.fround(-Math.PI), max: Math.fround(Math.PI), noNaN: true }), // rotation y
+        fc.float({ min: Math.fround(-Math.PI), max: Math.fround(Math.PI), noNaN: true }), // rotation z
+        (count, radius, rx, ry, rz) => {
+          const engine = new PhysicsEngine();
+          engine.initialize(count);
+          
+          const particleData = engine.getParticleData()!;
+          
+          // Set up planet shape (sphere centered at origin)
+          for (let i = 0; i < count; i++) {
+            const idx = i * 3;
+            const goldenRatio = (1 + Math.sqrt(5)) / 2;
+            const angleIncrement = Math.PI * 2 * goldenRatio;
+            const t = i / count;
+            const inclination = Math.acos(1 - 2 * t);
+            const azimuth = angleIncrement * i;
+            
+            const x = radius * Math.sin(inclination) * Math.cos(azimuth);
+            const y = radius * Math.sin(inclination) * Math.sin(azimuth);
+            const z = radius * Math.cos(inclination);
+            
+            particleData.targetPositions[idx] = x;
+            particleData.targetPositions[idx + 1] = y;
+            particleData.targetPositions[idx + 2] = z;
+          }
+          
+          // Store original positions
+          engine.storeOriginalTargetPositions();
+          
+          // Apply rotation
+          const rotation = { x: rx, y: ry, z: rz };
+          engine.updatePlanetRotation(rotation);
+          
+          // Verify rotation was stored
+          const planetRotation = engine.getPlanetRotation();
+          expect(planetRotation.x).toBeCloseTo(rx, 5);
+          expect(planetRotation.y).toBeCloseTo(ry, 5);
+          expect(planetRotation.z).toBeCloseTo(rz, 5);
+          
+          // Verify rotation was applied to particles
+          // After rotation, the distance from center should be preserved
+          const originalPositions = engine.getOriginalTargetPositions()!;
+          const planetCenter = engine.getPlanetCenter();
+          
+          for (let i = 0; i < count; i++) {
+            const idx = i * 3;
+            
+            // Calculate original distance from origin
+            const ox = originalPositions[idx];
+            const oy = originalPositions[idx + 1];
+            const oz = originalPositions[idx + 2];
+            const originalDist = Math.sqrt(ox * ox + oy * oy + oz * oz);
+            
+            // Calculate new distance from planet center
+            const tx = particleData.targetPositions[idx];
+            const ty = particleData.targetPositions[idx + 1];
+            const tz = particleData.targetPositions[idx + 2];
+            
+            const dx = tx - planetCenter.x;
+            const dy = ty - planetCenter.y;
+            const dz = tz - planetCenter.z;
+            const newDist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            
+            // Distance should be preserved after rotation
+            expect(newDist).toBeCloseTo(originalDist, 4);
+          }
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  /**
+   * Feature: webar-particle-interaction, Property 24: 行星形状完整性
+   * Validates: Requirements 16.5
+   * 
+   * For any rotation and tilt transformation, the planet should maintain
+   * its spherical shape integrity (all points remain on the sphere surface).
+   */
+  it('Property 24: planet shape integrity after transformations', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 10, max: 500 }), // particle count
+        fc.float({ min: Math.fround(0.5), max: Math.fround(5.0), noNaN: true }), // radius
+        fc.float({ min: Math.fround(-10), max: Math.fround(10), noNaN: true }), // translation x
+        fc.float({ min: Math.fround(-10), max: Math.fround(10), noNaN: true }), // translation y
+        fc.float({ min: Math.fround(-10), max: Math.fround(10), noNaN: true }), // translation z
+        fc.float({ min: Math.fround(-Math.PI), max: Math.fround(Math.PI), noNaN: true }), // rotation x
+        fc.float({ min: Math.fround(-Math.PI), max: Math.fround(Math.PI), noNaN: true }), // rotation y
+        fc.float({ min: Math.fround(-Math.PI), max: Math.fround(Math.PI), noNaN: true }), // rotation z
+        (count, radius, tx, ty, tz, rx, ry, rz) => {
+          const engine = new PhysicsEngine();
+          engine.initialize(count);
+          
+          const particleData = engine.getParticleData()!;
+          
+          // Set up planet shape (sphere centered at origin)
+          for (let i = 0; i < count; i++) {
+            const idx = i * 3;
+            const goldenRatio = (1 + Math.sqrt(5)) / 2;
+            const angleIncrement = Math.PI * 2 * goldenRatio;
+            const t = i / count;
+            const inclination = Math.acos(1 - 2 * t);
+            const azimuth = angleIncrement * i;
+            
+            const x = radius * Math.sin(inclination) * Math.cos(azimuth);
+            const y = radius * Math.sin(inclination) * Math.sin(azimuth);
+            const z = radius * Math.cos(inclination);
+            
+            particleData.targetPositions[idx] = x;
+            particleData.targetPositions[idx + 1] = y;
+            particleData.targetPositions[idx + 2] = z;
+          }
+          
+          // Store original positions
+          engine.storeOriginalTargetPositions();
+          
+          // Apply rotation first
+          engine.updatePlanetRotation({ x: rx, y: ry, z: rz });
+          
+          // Then apply translation
+          engine.updatePlanetPosition({ x: tx, y: ty, z: tz });
+          
+          // Verify all particles are still on the sphere surface
+          // (distance from planet center should equal radius)
+          for (let i = 0; i < count; i++) {
+            const distance = engine.getDistanceFromPlanetCenter(i);
+            
+            // Distance should be approximately equal to radius
+            expect(distance).toBeCloseTo(radius, 4);
+          }
+          
+          // Verify the shape is still a sphere by checking variance of distances
+          let sumDist = 0;
+          let sumDistSq = 0;
+          
+          for (let i = 0; i < count; i++) {
+            const distance = engine.getDistanceFromPlanetCenter(i);
+            sumDist += distance;
+            sumDistSq += distance * distance;
+          }
+          
+          const meanDist = sumDist / count;
+          const variance = (sumDistSq / count) - (meanDist * meanDist);
+          
+          // Variance should be very small (all points at same distance)
+          expect(variance).toBeLessThan(0.001);
+          
+          // Mean distance should be approximately equal to radius
+          expect(meanDist).toBeCloseTo(radius, 4);
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
 });

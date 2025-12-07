@@ -1,4 +1,5 @@
-.App {
+/* App 容器基础样式 */
+.app-container {
   width: 100%;
   height: 100vh;
   display: flex;
@@ -7,9 +8,161 @@
   align-items: center;
   background-color: #000;
   color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
 }
 
-h1 {
-  font-size: 2rem;
+/* 加载状态样式 */
+.app-container.loading {
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+}
+
+.loading-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 2rem;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-top: 4px solid #00d4ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-content h2 {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+  color: #00d4ff;
+}
+
+.loading-content p {
+  font-size: 1rem;
+  color: #aaa;
+  margin-bottom: 1.5rem;
+}
+
+.load-progress {
+  margin-top: 1.5rem;
+}
+
+.load-item {
+  font-size: 0.9rem;
+  color: #888;
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+/* 错误状态样式 */
+.app-container.error {
+  background: linear-gradient(135deg, #1a0a0a 0%, #2e1a1a 100%);
+}
+
+.error-content {
+  text-align: center;
+  padding: 2rem;
+  max-width: 600px;
+}
+
+.error-icon {
+  font-size: 4rem;
   margin-bottom: 1rem;
+}
+
+.error-content h2 {
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+  color: #ff4444;
+}
+
+.error-message {
+  font-size: 1rem;
+  color: #ffaaaa;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.retry-button {
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  color: #fff;
+  background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin-bottom: 2rem;
+}
+
+.retry-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 68, 68, 0.4);
+}
+
+.retry-button:active {
+  transform: translateY(0);
+}
+
+.error-details {
+  margin-top: 2rem;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.error-details h3 {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  color: #aaa;
+}
+
+.result-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  margin: 0.5rem 0;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.result-item.success {
+  background: rgba(0, 255, 0, 0.1);
+  color: #88ff88;
+}
+
+.result-item.failed {
+  background: rgba(255, 0, 0, 0.1);
+  color: #ffaaaa;
+}
+
+.result-icon {
+  margin-right: 0.5rem;
+  font-weight: bold;
+}
+
+.result-library {
+  font-weight: 600;
+}
+
+.result-error {
+  margin-left: 0.5rem;
+  color: #ff8888;
+  font-size: 0.85rem;
+}
+
+/* 加载完成状态样式 */
+.app-container.loaded {
+  padding: 0;
+  background-color: #000;
 }

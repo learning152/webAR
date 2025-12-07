@@ -200,6 +200,11 @@ export class PhysicsEngine {
   private explosionTimer: number = 0;
   private explosionCenter: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 };
   
+  // Planet state tracking
+  private planetCenter: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 };
+  private planetRotation: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 };
+  private originalTargetPositions: Float32Array | null = null;
+  
   constructor(config?: Partial<PhysicsConfig>) {
     // Default physics configuration
     this.config = {
@@ -451,5 +456,176 @@ export class PhysicsEngine {
     
     // Update physics (velocity and position integration)
     this.particleData.updatePhysics(deltaTime);
+  }
+  
+  /**
+   * Store original target positions for planet state
+   * This is called when entering planet state to save the base positions
+   * before any transformations are applied
+   */
+  public storeOriginalTargetPositions(): void {
+    if (!this.particleData) return;
+    
+    const count = this.particleData.getCount();
+    this.originalTargetPositions = new Float32Array(count * 3);
+    
+    for (let i = 0; i < count * 3; i++) {
+      this.originalTargetPositions[i] = this.particleData.targetPositions[i];
+    }
+  }
+  
+  /**
+   * Get the original target positions
+   */
+  public getOriginalTargetPositions(): Float32Array | null {
+    return this.originalTargetPositions;
+  }
+  
+  /**
+   * Update planet center position to follow hand
+   * Translates all target positions to follow the hand center
+   * 
+   * @param handCenter - The hand center position to follow
+   */
+  public updatePlanetPosition(handCenter: { x: number; y: number; z: number }): void {
+    if (!this.particleData || !this.originalTargetPositions) return;
+    
+    // Store the new planet center
+    this.planetCenter = { ...handCenter };
+    
+    // Apply translation to all target positions
+    const count = this.particleData.getCount();
+    
+    for (let i = 0; i < count; i++) {
+      const idx = i * 3;
+      
+      // Get original position (relative to origin)
+      const ox = this.originalTargetPositions[idx];
+      const oy = this.originalTargetPositions[idx + 1];
+      const oz = this.originalTargetPositions[idx + 2];
+      
+      // Apply current rotation first, then translation
+      const rotated = this.applyRotation(ox, oy, oz, this.planetRotation);
+      
+      // Translate to hand center
+      this.particleData.targetPositions[idx] = rotated.x + handCenter.x;
+      this.particleData.targetPositions[idx + 1] = rotated.y + handCenter.y;
+      this.particleData.targetPositions[idx + 2] = rotated.z + handCenter.z;
+    }
+  }
+  
+  /**
+   * Update planet rotation to follow hand rotation
+   * Rotates all target positions around the planet center
+   * 
+   * @param rotation - The rotation angles (Euler angles in radians)
+   */
+  public updatePlanetRotation(rotation: { x: number; y: number; z: number }): void {
+    if (!this.particleData || !this.originalTargetPositions) return;
+    
+    // Store the new rotation
+    this.planetRotation = { ...rotation };
+    
+    // Apply rotation and translation to all target positions
+    const count = this.particleData.getCount();
+    
+    for (let i = 0; i < count; i++) {
+      const idx = i * 3;
+      
+      // Get original position (relative to origin)
+      const ox = this.originalTargetPositions[idx];
+      const oy = this.originalTargetPositions[idx + 1];
+      const oz = this.originalTargetPositions[idx + 2];
+      
+      // Apply rotation
+      const rotated = this.applyRotation(ox, oy, oz, rotation);
+      
+      // Translate to planet center
+      this.particleData.targetPositions[idx] = rotated.x + this.planetCenter.x;
+      this.particleData.targetPositions[idx + 1] = rotated.y + this.planetCenter.y;
+      this.particleData.targetPositions[idx + 2] = rotated.z + this.planetCenter.z;
+    }
+  }
+  
+  /**
+   * Apply Euler rotation to a point
+   * Uses rotation order: X -> Y -> Z
+   * 
+   * @param x - X coordinate
+   * @param y - Y coordinate
+   * @param z - Z coordinate
+   * @param rotation - Euler angles in radians
+   * @returns Rotated coordinates
+   */
+  private applyRotation(
+    x: number,
+    y: number,
+    z: number,
+    rotation: { x: number; y: number; z: number }
+  ): { x: number; y: number; z: number } {
+    // Rotation around X axis
+    const cosX = Math.cos(rotation.x);
+    const sinX = Math.sin(rotation.x);
+    let y1 = y * cosX - z * sinX;
+    let z1 = y * sinX + z * cosX;
+    
+    // Rotation around Y axis
+    const cosY = Math.cos(rotation.y);
+    const sinY = Math.sin(rotation.y);
+    let x2 = x * cosY + z1 * sinY;
+    let z2 = -x * sinY + z1 * cosY;
+    
+    // Rotation around Z axis
+    const cosZ = Math.cos(rotation.z);
+    const sinZ = Math.sin(rotation.z);
+    let x3 = x2 * cosZ - y1 * sinZ;
+    let y3 = x2 * sinZ + y1 * cosZ;
+    
+    return { x: x3, y: y3, z: z2 };
+  }
+  
+  /**
+   * Get the current planet center position
+   */
+  public getPlanetCenter(): { x: number; y: number; z: number } {
+    return { ...this.planetCenter };
+  }
+  
+  /**
+   * Get the current planet rotation
+   */
+  public getPlanetRotation(): { x: number; y: number; z: number } {
+    return { ...this.planetRotation };
+  }
+  
+  /**
+   * Reset planet state (center and rotation)
+   */
+  public resetPlanetState(): void {
+    this.planetCenter = { x: 0, y: 0, z: 0 };
+    this.planetRotation = { x: 0, y: 0, z: 0 };
+    this.originalTargetPositions = null;
+  }
+  
+  /**
+   * Calculate the distance from a point to the planet center
+   * Used to verify shape integrity after transformations
+   * 
+   * @param index - Particle index
+   * @returns Distance from the particle's target position to planet center
+   */
+  public getDistanceFromPlanetCenter(index: number): number {
+    if (!this.particleData) return 0;
+    
+    const idx = index * 3;
+    const tx = this.particleData.targetPositions[idx];
+    const ty = this.particleData.targetPositions[idx + 1];
+    const tz = this.particleData.targetPositions[idx + 2];
+    
+    const dx = tx - this.planetCenter.x;
+    const dy = ty - this.planetCenter.y;
+    const dz = tz - this.planetCenter.z;
+    
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
   }
 }
