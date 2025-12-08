@@ -143,7 +143,7 @@ const DEFAULT_CONFIG: GestureEngineConfig = {
   modelComplexity: 1,
   minDetectionConfidence: 0.5,
   minTrackingConfidence: 0.5,
-  processInterval: 50 // 20 FPS
+  processInterval: 40 // 25 FPS (reduced from 50ms for more responsive detection)
 };
 
 /**

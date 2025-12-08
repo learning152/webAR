@@ -86,12 +86,12 @@ export class ShapeGenerator {
       // Normalize z to [0, 1] range
       const heightRatio = (z + radius) / (2 * radius);
       
-      // Gold color: (1.0, 0.84, 0.0)
-      // Blue color: (0.0, 0.5, 1.0)
+      // Gold color: (1.0, 0.88, 0.1) - brighter and warmer
+      // Blue color: (0.0, 0.6, 1.0) - brighter blue
       // Interpolate between them based on height
       const r = 1.0 * (1 - heightRatio) + 0.0 * heightRatio;
-      const g = 0.84 * (1 - heightRatio) + 0.5 * heightRatio;
-      const b = 0.0 * (1 - heightRatio) + 1.0 * heightRatio;
+      const g = 0.88 * (1 - heightRatio) + 0.6 * heightRatio;
+      const b = 0.1 * (1 - heightRatio) + 1.0 * heightRatio;
       
       colors.push({ r, g, b });
     }
@@ -494,10 +494,10 @@ export class ShapeGenerator {
     const positions: Vector3[] = [...heartPositions, ...arrowPositions];
     
     // Generate pink colors for all particles
-    // Pink color: (1.0, 0.4, 0.7) - a vibrant pink
+    // Pink color: (1.0, 0.5, 0.75) - a brighter, more vibrant pink
     const colors: Color[] = [];
     for (let i = 0; i < count; i++) {
-      colors.push({ r: 1.0, g: 0.4, b: 0.7 });
+      colors.push({ r: 1.0, g: 0.5, b: 0.75 });
     }
     
     return { positions, colors };

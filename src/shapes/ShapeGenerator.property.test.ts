@@ -84,27 +84,28 @@ describe('ShapeGenerator Property-Based Tests', () => {
             expect(Number.isFinite(color.g)).toBe(true);
             expect(Number.isFinite(color.b)).toBe(true);
             
-            // Calculate expected color based on height
+            // Calculate expected color based on height (optimized values)
             const heightRatio = (pos.z + radius) / (2 * radius);
             
-            // Verify color is interpolated between gold and blue
+            // Verify color is interpolated between gold and blue (optimized colors)
+            // Gold: (1.0, 0.88, 0.1), Blue: (0.0, 0.6, 1.0)
             const expectedR = 1.0 * (1 - heightRatio) + 0.0 * heightRatio;
-            const expectedG = 0.84 * (1 - heightRatio) + 0.5 * heightRatio;
-            const expectedB = 0.0 * (1 - heightRatio) + 1.0 * heightRatio;
+            const expectedG = 0.88 * (1 - heightRatio) + 0.6 * heightRatio;
+            const expectedB = 0.1 * (1 - heightRatio) + 1.0 * heightRatio;
             
             expect(color.r).toBeCloseTo(expectedR, 5);
             expect(color.g).toBeCloseTo(expectedG, 5);
             expect(color.b).toBeCloseTo(expectedB, 5);
             
-            // Verify gradient property: colors should be between gold and blue
+            // Verify gradient property: colors should be between gold and blue (optimized)
             // Red should be between 0 (blue) and 1 (gold)
-            // Green should be between 0.5 (blue) and 0.84 (gold)
-            // Blue should be between 0 (gold) and 1 (blue)
+            // Green should be between 0.6 (blue) and 0.88 (gold)
+            // Blue should be between 0.1 (gold) and 1 (blue)
             expect(color.r).toBeGreaterThanOrEqual(0);
             expect(color.r).toBeLessThanOrEqual(1);
-            expect(color.g).toBeGreaterThanOrEqual(0.5);
-            expect(color.g).toBeLessThanOrEqual(0.84);
-            expect(color.b).toBeGreaterThanOrEqual(0);
+            expect(color.g).toBeGreaterThanOrEqual(0.6);
+            expect(color.g).toBeLessThanOrEqual(0.88);
+            expect(color.b).toBeGreaterThanOrEqual(0.1);
             expect(color.b).toBeLessThanOrEqual(1);
           }
         }
@@ -194,8 +195,8 @@ describe('ShapeGenerator Property-Based Tests', () => {
           expect(result.positions.length).toBe(count);
           expect(result.colors.length).toBe(count);
           
-          // Pink color should be (1.0, 0.4, 0.7)
-          const expectedPink = { r: 1.0, g: 0.4, b: 0.7 };
+          // Pink color should be (1.0, 0.5, 0.75) - optimized for better visibility
+          const expectedPink = { r: 1.0, g: 0.5, b: 0.75 };
           
           // Verify all particles have pink color
           for (let i = 0; i < count; i++) {

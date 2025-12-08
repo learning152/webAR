@@ -14,6 +14,7 @@ import { CameraManager } from '../utils/CameraManager';
 import { PerformanceMonitor } from '../utils/PerformanceMonitor';
 import { ShapeType } from '../shapes/ShapeGenerator';
 import { UIControls } from './UIControls';
+import { GestureSimulator, type Euler } from './GestureSimulator';
 
 /**
  * ParticleCanvas 组件属性
@@ -24,6 +25,9 @@ export interface ParticleCanvasProps {
   onError?: (error: string) => void; // 错误回调
   showUIControls?: boolean; // 是否显示 UI 控制层，默认 true
   showDebugInfo?: boolean; // 是否显示调试信息，默认 false
+  enableFallbackMode?: boolean; // 是否启用降级模式，默认 true
+  showSimulatorButton?: boolean; // 是否显示模拟器按钮，默认 true
+  onCameraStatusChange?: (available: boolean) => void; // 摄像头状态回调
 }
 
 /**
@@ -35,7 +39,10 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
   onGestureChange,
   onError,
   showUIControls = true,
-  showDebugInfo = false
+  showDebugInfo = false,
+  enableFallbackMode = true,
+  showSimulatorButton = true,
+  onCameraStatusChange
 }) => {
   // DOM 引用
   const containerRef = useRef<HTMLDivElement>(null);
@@ -59,11 +66,105 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
   const [handData, setHandData] = useState<HandData | null>(null);
   const [fps, setFps] = useState<number>(60);
   const [currentParticleCount, setCurrentParticleCount] = useState<number>(particleCount);
+  
+  // 摄像头和降级模式状态
+  const [cameraAvailable, setCameraAvailable] = useState<boolean>(false);
+  const [fallbackMode, setFallbackMode] = useState<boolean>(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [canRetryCamera, setCanRetryCamera] = useState<boolean>(false);
+  const [showSimulator, setShowSimulator] = useState<boolean>(false);
+  const [simulatorActive, setSimulatorActive] = useState<boolean>(false);
+  const [currentShape, setCurrentShape] = useState<ShapeType>(ShapeType.PLANET);
 
   useEffect(() => {
     // 初始化标志
     let mounted = true;
     let initialized = false;
+
+    /**
+     * 初始化摄像头（非阻塞）
+     */
+    const initializeCamera = async () => {
+      try {
+        if (!videoRef.current) {
+          throw new Error('视频元素未找到');
+        }
+
+        // 初始化摄像头管理器
+        const cameraManager = new CameraManager();
+        const cameraResult = await cameraManager.requestCamera();
+        
+        if (!cameraResult.success) {
+          // 摄像头失败，但不阻塞应用
+          console.warn('摄像头初始化失败:', cameraResult.errorMessage);
+          setCameraError(cameraResult.errorMessage || '摄像头访问失败');
+          setCameraAvailable(false);
+          
+          // 根据错误类型决定是否可以重试
+          if (cameraResult.error !== 'device_not_found') {
+            setCanRetryCamera(true);
+          }
+          
+          // 进入降级模式
+          if (enableFallbackMode) {
+            setFallbackMode(true);
+            setShowSimulator(true);
+          }
+          
+          if (onCameraStatusChange) {
+            onCameraStatusChange(false);
+          }
+          
+          return;
+        }
+
+        // 将视频流绑定到 video 元素
+        const attached = await cameraManager.attachToVideoElement(videoRef.current);
+        if (!attached) {
+          console.warn('视频流绑定失败');
+          setCameraAvailable(false);
+          
+          if (enableFallbackMode) {
+            setFallbackMode(true);
+            setShowSimulator(true);
+          }
+          
+          if (onCameraStatusChange) {
+            onCameraStatusChange(false);
+          }
+          
+          return;
+        }
+        
+        cameraManagerRef.current = cameraManager;
+
+        // 初始化手势识别引擎
+        const gestureEngine = new GestureEngine();
+        await gestureEngine.initialize(videoRef.current);
+        gestureEngineRef.current = gestureEngine;
+        
+        // 摄像头成功
+        setCameraAvailable(true);
+        setFallbackMode(false);
+        setCameraError(null);
+        
+        if (onCameraStatusChange) {
+          onCameraStatusChange(true);
+        }
+      } catch (error) {
+        console.error('摄像头初始化错误:', error);
+        setCameraAvailable(false);
+        
+        if (enableFallbackMode) {
+          setFallbackMode(true);
+          setShowSimulator(true);
+        }
+        
+        if (onCameraStatusChange) {
+          onCameraStatusChange(false);
+        }
+      }
+    };
 
     /**
      * 初始化所有引擎
@@ -85,37 +186,16 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
         physicsEngine.initialize(particleCount);
         physicsEngineRef.current = physicsEngine;
 
-        // 3. 初始化摄像头管理器
-        const cameraManager = new CameraManager();
-        const cameraResult = await cameraManager.requestCamera();
-        
-        if (!cameraResult.success) {
-          throw new Error(cameraResult.errorMessage || '摄像头访问失败');
-        }
-
-        // 将视频流绑定到 video 元素
-        const attached = await cameraManager.attachToVideoElement(videoRef.current);
-        if (!attached) {
-          throw new Error('视频流绑定失败');
-        }
-        
-        cameraManagerRef.current = cameraManager;
-
-        // 4. 初始化手势识别引擎
-        const gestureEngine = new GestureEngine();
-        await gestureEngine.initialize(videoRef.current);
-        gestureEngineRef.current = gestureEngine;
-
-        // 5. 初始化手势状态机
+        // 3. 初始化手势状态机
         const stateMachine = new GestureStateMachine();
         stateMachineRef.current = stateMachine;
 
-        // 6. 初始化交互管理器
+        // 4. 初始化交互管理器
         const interactionManager = new InteractionManager();
         interactionManager.setPhysicsEngine(physicsEngine);
         interactionManagerRef.current = interactionManager;
 
-        // 7. 初始化性能监控器
+        // 5. 初始化性能监控器
         const performanceMonitor = new PerformanceMonitor(
           particleCount,
           50, // 手势检测间隔
@@ -150,6 +230,8 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
           if (targetShape) {
             // 触发爆炸过渡特效
             interactionManager.triggerTransition(targetShape);
+            // 更新当前形态
+            setCurrentShape(targetShape);
           }
           
           // 处理手势变化（检测手指比心散开）
@@ -175,6 +257,9 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
 
         // 启动渲染循环
         startRenderLoop();
+        
+        // 非阻塞地初始化摄像头
+        initializeCamera();
 
         // 清理函数
         return () => {
@@ -212,8 +297,8 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
             performanceMonitorRef.current.update();
           }
 
-          // 2. 更新手势引擎
-          if (gestureEngineRef.current) {
+          // 2. 更新手势引擎（仅在摄像头可用且模拟器未激活时）
+          if (gestureEngineRef.current && !simulatorActive) {
             gestureEngineRef.current.update();
             
             // 更新 UI 状态
@@ -223,14 +308,14 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
             setHandData(hand);
           }
 
-          // 3. 更新状态机
-          if (stateMachineRef.current && gestureEngineRef.current) {
+          // 3. 更新状态机（仅在摄像头可用且模拟器未激活时）
+          if (stateMachineRef.current && gestureEngineRef.current && !simulatorActive) {
             const currentGesture = gestureEngineRef.current.getCurrentGesture();
             stateMachineRef.current.update(currentGesture, clampedDeltaTime);
           }
 
-          // 4. 更新交互管理器（挥手风暴和深度推拉）
-          if (interactionManagerRef.current && gestureEngineRef.current) {
+          // 4. 更新交互管理器（挥手风暴和深度推拉）（仅在摄像头可用且模拟器未激活时）
+          if (interactionManagerRef.current && gestureEngineRef.current && !simulatorActive) {
             const handData = gestureEngineRef.current.getHandData();
             if (handData) {
               interactionManagerRef.current.update(handData, clampedDeltaTime);
@@ -305,7 +390,7 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
       interactionManagerRef.current = null;
       performanceMonitorRef.current = null;
     };
-  }, [particleCount, onGestureChange, onError]);
+  }, [particleCount, onGestureChange, onError, enableFallbackMode, onCameraStatusChange]);
 
   /**
    * 处理粒子数量变化
@@ -317,6 +402,139 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
     // 注意：实际应用中，这里需要重新初始化物理引擎和渲染引擎
     // 为了简化，这里只更新状态，实际重新初始化需要更复杂的逻辑
     // 可以考虑在未来版本中实现动态粒子数量调整
+  };
+
+  /**
+   * 处理模拟器形态变化
+   */
+  const handleSimulatorShapeChange = (shape: ShapeType) => {
+    console.log(`模拟器形态变化: ${shape}`);
+    
+    if (interactionManagerRef.current) {
+      // 触发爆炸过渡特效
+      interactionManagerRef.current.triggerTransition(shape);
+      // 更新当前形态
+      setCurrentShape(shape);
+    }
+  };
+
+  /**
+   * 处理模拟器旋转变化
+   */
+  const handleSimulatorRotationChange = (delta: Euler) => {
+    if (threeEngineRef.current) {
+      threeEngineRef.current.addSceneRotation(delta);
+    }
+  };
+
+  /**
+   * 处理模拟器缩放变化
+   */
+  const handleSimulatorScaleChange = (scale: number) => {
+    if (threeEngineRef.current) {
+      threeEngineRef.current.setSceneScale(scale);
+    }
+  };
+
+  /**
+   * 处理模拟器关闭
+   */
+  const handleSimulatorClose = () => {
+    setShowSimulator(false);
+    setSimulatorActive(false);
+  };
+
+  /**
+   * 处理显示模拟器按钮点击
+   */
+  const handleShowSimulator = () => {
+    setShowSimulator(true);
+    setSimulatorActive(true);
+  };
+
+  /**
+   * 重试摄像头初始化
+   */
+  const handleRetryCamera = async () => {
+    console.log('重试摄像头初始化...');
+    setCameraError(null);
+    setCanRetryCamera(false);
+    
+    // 清理现有的摄像头和手势引擎
+    if (gestureEngineRef.current) {
+      gestureEngineRef.current.dispose();
+      gestureEngineRef.current = null;
+    }
+    
+    if (cameraManagerRef.current) {
+      cameraManagerRef.current.stop();
+      cameraManagerRef.current = null;
+    }
+    
+    // 重新初始化摄像头
+    if (!videoRef.current) {
+      return;
+    }
+
+    try {
+      const cameraManager = new CameraManager();
+      const cameraResult = await cameraManager.requestCamera();
+      
+      if (!cameraResult.success) {
+        console.warn('摄像头重试失败:', cameraResult.errorMessage);
+        setCameraError(cameraResult.errorMessage || '摄像头访问失败');
+        setCameraAvailable(false);
+        
+        if (cameraResult.error !== 'device_not_found') {
+          setCanRetryCamera(true);
+        }
+        
+        if (onCameraStatusChange) {
+          onCameraStatusChange(false);
+        }
+        
+        return;
+      }
+
+      const attached = await cameraManager.attachToVideoElement(videoRef.current);
+      if (!attached) {
+        console.warn('视频流绑定失败');
+        setCameraAvailable(false);
+        setCanRetryCamera(true);
+        
+        if (onCameraStatusChange) {
+          onCameraStatusChange(false);
+        }
+        
+        return;
+      }
+      
+      cameraManagerRef.current = cameraManager;
+
+      const gestureEngine = new GestureEngine();
+      await gestureEngine.initialize(videoRef.current);
+      gestureEngineRef.current = gestureEngine;
+      
+      setCameraAvailable(true);
+      setFallbackMode(false);
+      setCameraError(null);
+      setShowSimulator(false);
+      setSimulatorActive(false);
+      
+      if (onCameraStatusChange) {
+        onCameraStatusChange(true);
+      }
+      
+      console.log('摄像头重试成功');
+    } catch (error) {
+      console.error('摄像头重试错误:', error);
+      setCameraAvailable(false);
+      setCanRetryCamera(true);
+      
+      if (onCameraStatusChange) {
+        onCameraStatusChange(false);
+      }
+    }
   };
 
   return (
@@ -356,6 +574,81 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
           onParticleCountChange={handleParticleCountChange}
           showDebugInfo={showDebugInfo}
         />
+      )}
+      
+      {/* 手势模拟器 */}
+      {enableFallbackMode && (
+        <GestureSimulator
+          visible={showSimulator}
+          currentShape={currentShape}
+          onShapeChange={handleSimulatorShapeChange}
+          onRotationChange={handleSimulatorRotationChange}
+          onScaleChange={handleSimulatorScaleChange}
+          onClose={handleSimulatorClose}
+        />
+      )}
+      
+      {/* 模拟器控制按钮 */}
+      {enableFallbackMode && showSimulatorButton && !showSimulator && (
+        <button
+          onClick={handleShowSimulator}
+          style={{
+            position: 'absolute',
+            bottom: '20px',
+            right: '20px',
+            padding: '12px 24px',
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+            zIndex: 1000
+          }}
+        >
+          🎮 显示手势模拟器
+        </button>
+      )}
+      
+      {/* 摄像头错误提示和重试按钮 */}
+      {fallbackMode && cameraError && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            padding: '12px 24px',
+            backgroundColor: 'rgba(255, 200, 0, 0.9)',
+            borderRadius: '8px',
+            color: '#000',
+            fontSize: '14px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}
+        >
+          <span>⚠️ {cameraError}</span>
+          {canRetryCamera && (
+            <button
+              onClick={handleRetryCamera}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: 'bold'
+              }}
+            >
+              重试
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

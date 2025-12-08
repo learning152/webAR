@@ -27,8 +27,8 @@ describe('InteractionManager', () => {
     });
     
     it('should calculate velocity magnitude correctly for 3D vectors', () => {
-      const velocity = { x: 3, y: 4, z: 0 }; // Speed = 5 (exactly at threshold)
-      expect(manager.checkWaveStorm(velocity)).toBe(false); // Should be false (not exceeding)
+      const velocity = { x: 3, y: 4, z: 0 }; // Speed = 5 (above optimized threshold of 4.0)
+      expect(manager.checkWaveStorm(velocity)).toBe(true); // Should be true (exceeding optimized threshold)
       
       const velocity2 = { x: 3, y: 4, z: 0.1 }; // Speed > 5
       expect(manager.checkWaveStorm(velocity2)).toBe(true);
@@ -315,11 +315,11 @@ describe('InteractionManager', () => {
         manager.update(null, deltaTime);
       }
       
-      // Check that colors are pink (1.0, 0.4, 0.7)
+      // Check that colors are pink (1.0, 0.5, 0.75) - optimized brighter pink
       const particle = particleData.getParticle(0);
       expect(particle.color.r).toBeCloseTo(1.0, 1);
-      expect(particle.color.g).toBeCloseTo(0.4, 1);
-      expect(particle.color.b).toBeCloseTo(0.7, 1);
+      expect(particle.color.g).toBeCloseTo(0.5, 1);
+      expect(particle.color.b).toBeCloseTo(0.75, 1);
     });
     
     it('should maintain cyan color for non-special shapes', () => {
@@ -407,8 +407,8 @@ describe('InteractionManager', () => {
       expect(manager.getTransitionProgress()).toBeGreaterThan(0);
       expect(manager.getTransitionProgress()).toBeLessThan(1);
       
-      // Complete the transition
-      manager.update(null, 0.2);
+      // Complete the transition (now 0.4s duration instead of 0.3s)
+      manager.update(null, 0.3); // Need more time due to optimized duration
       
       expect(manager.isInTransition()).toBe(false);
       expect(manager.getTransitionProgress()).toBe(1.0);
@@ -419,14 +419,15 @@ describe('InteractionManager', () => {
     it('should use default configuration', () => {
       const config = manager.getConfig();
       
-      expect(config.waveStorm.velocityThreshold).toBe(5.0);
-      expect(config.waveStorm.forceStrength).toBe(8.0);
-      expect(config.waveStorm.influenceRadius).toBe(2.0);
-      expect(config.depthScale.minScale).toBe(0.5);
-      expect(config.depthScale.maxScale).toBe(2.0);
-      expect(config.depthScale.smoothing).toBe(0.1);
-      expect(config.explosionTransition.explosionStrength).toBe(5.0);
-      expect(config.explosionTransition.explosionDuration).toBe(0.3);
+      // Optimized values
+      expect(config.waveStorm.velocityThreshold).toBe(4.0);
+      expect(config.waveStorm.forceStrength).toBe(10.0);
+      expect(config.waveStorm.influenceRadius).toBe(2.5);
+      expect(config.depthScale.minScale).toBe(0.6);
+      expect(config.depthScale.maxScale).toBe(2.5);
+      expect(config.depthScale.smoothing).toBe(0.15);
+      expect(config.explosionTransition.explosionStrength).toBe(7.0);
+      expect(config.explosionTransition.explosionDuration).toBe(0.4);
     });
     
     it('should accept custom configuration', () => {
@@ -491,8 +492,8 @@ describe('InteractionManager', () => {
       expect(midProgress).toBeGreaterThan(0);
       expect(midProgress).toBeLessThan(1);
       
-      // Complete
-      manager.update(null, 0.2);
+      // Complete (now 0.4s duration instead of 0.3s)
+      manager.update(null, 0.3); // Need more time due to optimized duration
       expect(manager.getTransitionProgress()).toBe(1.0);
     });
   });
@@ -587,19 +588,19 @@ describe('InteractionManager', () => {
         
         manager.triggerFingerHeartSpread();
         
-        // Update halfway through transition (default duration is 0.5s)
-        manager.update(null, 0.25);
+        // Update halfway through transition (optimized duration is 0.6s)
+        manager.update(null, 0.3);
         
         const midParticle = particleData.getParticle(0);
         
         // Colors should be between pink and cyan
         expect(midParticle.color.r).toBeLessThan(1.0);
         expect(midParticle.color.r).toBeGreaterThan(0);
-        expect(midParticle.color.g).toBeGreaterThan(0.4);
+        expect(midParticle.color.g).toBeGreaterThan(0.5); // Updated from 0.4 for optimized pink
         expect(midParticle.color.g).toBeLessThan(1.0);
         
         // Complete the transition
-        manager.update(null, 0.3);
+        manager.update(null, 0.4); // Need more time due to optimized duration (0.6s total)
         
         const finalParticle = particleData.getParticle(0);
         
@@ -675,14 +676,14 @@ describe('InteractionManager', () => {
         // At start
         expect(manager.getFingerHeartSpreadProgress()).toBeCloseTo(0, 1);
         
-        // Midway (default duration is 0.5s)
-        manager.update(null, 0.25);
+        // Midway (optimized duration is 0.6s)
+        manager.update(null, 0.3);
         const midProgress = manager.getFingerHeartSpreadProgress();
         expect(midProgress).toBeGreaterThan(0);
         expect(midProgress).toBeLessThan(1);
         
         // Complete
-        manager.update(null, 0.3);
+        manager.update(null, 0.4); // Need more time due to optimized duration
         expect(manager.getFingerHeartSpreadProgress()).toBe(1.0);
       });
     });
@@ -691,8 +692,8 @@ describe('InteractionManager', () => {
       it('should use default finger heart spread configuration', () => {
         const config = manager.getConfig();
         
-        expect(config.fingerHeartSpread.colorTransitionDuration).toBe(0.5);
-        expect(config.fingerHeartSpread.spreadStrength).toBe(6.0);
+        expect(config.fingerHeartSpread.colorTransitionDuration).toBe(0.6); // Optimized from 0.5
+        expect(config.fingerHeartSpread.spreadStrength).toBe(8.0); // Optimized from 6.0
       });
       
       it('should accept custom finger heart spread configuration', () => {

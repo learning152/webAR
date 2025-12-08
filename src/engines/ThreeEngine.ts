@@ -37,18 +37,18 @@ export class ThreeEngine {
 
     // 创建场景
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x000000); // 黑色背景
+    this.scene.background = new THREE.Color(0x0a0a0a); // Slightly lighter than pure black for contrast
 
-    // 创建相机
+    // 创建相机 (optimized for better view)
     const width = container.clientWidth || window.innerWidth;
     const height = container.clientHeight || window.innerHeight;
     this.camera = new THREE.PerspectiveCamera(
-      75, // FOV
+      70, // FOV (reduced from 75 for less distortion)
       width / height, // 宽高比
       0.1, // 近裁剪面
       1000 // 远裁剪面
     );
-    this.camera.position.z = 5;
+    this.camera.position.z = 6; // Increased from 5 for better view
 
     // 创建渲染器
     this.renderer = new THREE.WebGLRenderer({
@@ -84,13 +84,13 @@ export class ThreeEngine {
     this.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     this.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-    // 创建粒子材质
+    // 创建粒子材质 (optimized for better visibility)
     this.material = new THREE.PointsMaterial({
-      size: 0.05,
+      size: 0.06,                    // Increased from 0.05 for better visibility
       vertexColors: true,
       blending: THREE.AdditiveBlending,
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.85,                 // Increased from 0.8 for more vibrant appearance
       sizeAttenuation: true
     });
 
@@ -288,5 +288,82 @@ export class ThreeEngine {
    */
   public getPoints(): any {
     return this.points;
+  }
+
+  /**
+   * 设置场景旋转
+   * @param rotation - 旋转角度 { x, y, z } (弧度)
+   */
+  public setSceneRotation(rotation: { x: number; y: number; z: number }): void {
+    if (!this.points) {
+      console.warn('粒子系统未初始化');
+      return;
+    }
+
+    this.points.rotation.x = rotation.x;
+    this.points.rotation.y = rotation.y;
+    this.points.rotation.z = rotation.z;
+  }
+
+  /**
+   * 增量旋转场景
+   * @param delta - 旋转增量 { x, y, z } (弧度)
+   */
+  public addSceneRotation(delta: { x: number; y: number; z: number }): void {
+    if (!this.points) {
+      console.warn('粒子系统未初始化');
+      return;
+    }
+
+    this.points.rotation.x += delta.x;
+    this.points.rotation.y += delta.y;
+    this.points.rotation.z += delta.z;
+  }
+
+  /**
+   * 获取当前场景旋转
+   * @returns 当前旋转角度 { x, y, z } (弧度)
+   */
+  public getSceneRotation(): { x: number; y: number; z: number } {
+    if (!this.points) {
+      console.warn('粒子系统未初始化');
+      return { x: 0, y: 0, z: 0 };
+    }
+
+    return {
+      x: this.points.rotation.x,
+      y: this.points.rotation.y,
+      z: this.points.rotation.z
+    };
+  }
+
+  /**
+   * 设置场景缩放
+   * @param scale - 缩放比例 (0.5 到 2.0)
+   */
+  public setSceneScale(scale: number): void {
+    if (!this.points) {
+      console.warn('粒子系统未初始化');
+      return;
+    }
+
+    // 限制缩放范围在 0.5 到 2.0 之间
+    const clampedScale = Math.max(0.5, Math.min(2.0, scale));
+
+    this.points.scale.set(clampedScale, clampedScale, clampedScale);
+  }
+
+  /**
+   * 获取当前场景缩放
+   * @returns 当前缩放比例
+   */
+  public getSceneScale(): number {
+    if (!this.points) {
+      console.warn('粒子系统未初始化');
+      return 1.0;
+    }
+
+    // 返回 x 轴的缩放值（假设 xyz 缩放相同）
+    return this.points.scale.x;
   }
 }

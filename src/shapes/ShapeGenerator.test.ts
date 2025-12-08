@@ -196,8 +196,8 @@ describe('ShapeGenerator Unit Tests', () => {
       // Pink color: (1.0, 0.4, 0.7)
       for (const color of result.colors) {
         expect(color.r).toBeCloseTo(1.0, 5);
-        expect(color.g).toBeCloseTo(0.4, 5);
-        expect(color.b).toBeCloseTo(0.7, 5);
+        expect(color.g).toBeCloseTo(0.5, 5); // Updated from 0.4 for optimized brighter pink
+        expect(color.b).toBeCloseTo(0.75, 5); // Updated from 0.7 for optimized brighter pink
       }
     });
 

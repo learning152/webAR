@@ -53,22 +53,22 @@ export interface InteractionManagerConfig {
 
 const DEFAULT_CONFIG: InteractionManagerConfig = {
   waveStorm: {
-    velocityThreshold: 5.0,      // 速度阈值
-    forceStrength: 8.0,          // 风暴力强度
-    influenceRadius: 2.0         // 影响半径
+    velocityThreshold: 4.0,      // 速度阈值 (reduced for easier triggering)
+    forceStrength: 10.0,         // 风暴力强度 (increased for more impact)
+    influenceRadius: 2.5         // 影响半径 (increased for wider effect)
   },
   depthScale: {
-    minScale: 0.5,               // 最小缩放
-    maxScale: 2.0,               // 最大缩放
-    smoothing: 0.1               // 平滑系数
+    minScale: 0.6,               // 最小缩放 (increased for better visibility)
+    maxScale: 2.5,               // 最大缩放 (increased for more dramatic effect)
+    smoothing: 0.15              // 平滑系数 (increased for smoother transitions)
   },
   explosionTransition: {
-    explosionStrength: 5.0,      // 爆炸力强度
-    explosionDuration: 0.3       // 爆炸持续时间
+    explosionStrength: 7.0,      // 爆炸力强度 (increased for more dramatic effect)
+    explosionDuration: 0.4       // 爆炸持续时间 (increased for smoother transitions)
   },
   fingerHeartSpread: {
-    colorTransitionDuration: 0.5, // 颜色过渡持续时间
-    spreadStrength: 6.0           // 散开力强度
+    colorTransitionDuration: 0.6, // 颜色过渡持续时间 (increased for smoother color transition)
+    spreadStrength: 8.0           // 散开力强度 (increased for more dramatic spread)
   }
 };
 
@@ -300,7 +300,7 @@ export class InteractionManager {
     // 根据形状类型生成目标位置
     switch (shapeType) {
       case ShapeType.PLANET: {
-        const result = this.shapeGenerator.generatePlanet(count, 3.0);
+        const result = this.shapeGenerator.generatePlanet(count, 3.5); // Increased from 3.0 for better visibility
         positions = result.positions;
         // 更新颜色为金蓝渐变
         for (let i = 0; i < count; i++) {
@@ -317,22 +317,22 @@ export class InteractionManager {
         this.resetToCyanColor();
         break;
       case ShapeType.TORUS:
-        positions = this.shapeGenerator.generateTorus(count, 3.0, 1.0);
+        positions = this.shapeGenerator.generateTorus(count, 3.5, 1.2); // Increased for better visibility
         // 保持青色
         this.resetToCyanColor();
         break;
       case ShapeType.STAR:
-        positions = this.shapeGenerator.generateStar(count, 3.0, 1.2);
+        positions = this.shapeGenerator.generateStar(count, 3.5, 1.4); // Increased for better visibility
         // 保持青色
         this.resetToCyanColor();
         break;
       case ShapeType.HEART:
-        positions = this.shapeGenerator.generateHeart(count, 1.5);
+        positions = this.shapeGenerator.generateHeart(count, 1.8); // Increased from 1.5 for better visibility
         // 保持青色
         this.resetToCyanColor();
         break;
       case ShapeType.ARROW_HEART: {
-        const result = this.shapeGenerator.generateArrowHeart(count, 1.5);
+        const result = this.shapeGenerator.generateArrowHeart(count, 1.8); // Increased from 1.5 for better visibility
         positions = result.positions;
         // 更新颜色为粉色
         for (let i = 0; i < count; i++) {
@@ -497,8 +497,8 @@ export class InteractionManager {
     
     const count = particleData.getCount();
     
-    // 粉色 (1.0, 0.4, 0.7) -> 青色 (0, 1, 1)
-    const pinkR = 1.0, pinkG = 0.4, pinkB = 0.7;
+    // 粉色 (1.0, 0.5, 0.75) -> 青色 (0, 1, 1) - brighter pink for better visibility
+    const pinkR = 1.0, pinkG = 0.5, pinkB = 0.75;
     const cyanR = 0, cyanG = 1, cyanB = 1;
     
     for (let i = 0; i < count; i++) {

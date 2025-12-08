@@ -152,7 +152,7 @@ describe('InteractionManager Property-Based Tests', () => {
   it('wave storm should not trigger when velocity is below threshold', () => {
     fc.assert(
       fc.property(
-        fc.float({ min: Math.fround(0), max: Math.fround(4.9), noNaN: true }), // speed below threshold
+        fc.float({ min: Math.fround(0), max: Math.fround(3.9), noNaN: true }), // speed below optimized threshold of 4.0
         fc.float({ min: Math.fround(0), max: Math.fround(2 * Math.PI), noNaN: true }), // theta
         fc.float({ min: Math.fround(0), max: Math.fround(Math.PI), noNaN: true }), // phi
         (speed, theta, phi) => {

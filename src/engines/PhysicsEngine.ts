@@ -23,10 +23,10 @@ export class ParticleData {
   public targetPositions: Float32Array; // [tx, ty, tz] * count
   public colors: Float32Array;         // [r, g, b] * count
   
-  // Physical parameters
+  // Physical parameters (optimized for smooth motion)
   public mass: number = 1.0;
-  public damping: number = 0.95;
-  public maxSpeed: number = 10.0;
+  public damping: number = 0.92;        // Reduced from 0.95 for faster settling
+  public maxSpeed: number = 12.0;       // Increased from 10.0 for more dynamic motion
   
   constructor(count: number) {
     this.count = count;
@@ -206,15 +206,15 @@ export class PhysicsEngine {
   private originalTargetPositions: Float32Array | null = null;
   
   constructor(config?: Partial<PhysicsConfig>) {
-    // Default physics configuration
+    // Optimized physics configuration for smooth, natural motion
     this.config = {
-      damping: 0.95,
-      maxSpeed: 10.0,
-      maxAcceleration: 5.0,
-      attractionStrength: 2.0,
-      attractionRadius: 0.5,
-      explosionStrength: 5.0,
-      explosionDuration: 0.3,
+      damping: 0.92,                    // Reduced for faster settling
+      maxSpeed: 12.0,                   // Increased for more dynamic motion
+      maxAcceleration: 6.0,             // Increased for snappier response
+      attractionStrength: 3.5,          // Increased for faster shape formation
+      attractionRadius: 0.8,            // Increased for smoother transitions
+      explosionStrength: 7.0,           // Increased for more dramatic effect
+      explosionDuration: 0.4,           // Increased for smoother transitions
       ...config
     };
   }
