@@ -246,6 +246,9 @@ export class InteractionManager {
       return;
     }
     
+    // 更新 PhysicsEngine 的当前形态类型
+    this.physicsEngine.setCurrentShapeType(toShape);
+    
     // 触发爆炸效果
     this.physicsEngine.triggerExplosion(center);
     
@@ -297,17 +300,17 @@ export class InteractionManager {
     const count = particleData.getCount();
     let positions: Vector3[] = [];
     
-    // 根据形状类型生成目标位置
+    // 根据形状类型生成目标位置（使用体积采样方法）
     switch (shapeType) {
       case ShapeType.PLANET: {
-        const result = this.shapeGenerator.generatePlanet(count, 3.5); // Increased from 3.0 for better visibility
-        positions = result.positions;
-        // 更新颜色为金蓝渐变
-        for (let i = 0; i < count; i++) {
+        const particles = this.shapeGenerator.generatePlanetVolume(count, 3.5); // 使用体积采样
+        positions = particles.map(p => p.position);
+        // 更新颜色
+        for (let i = 0; i < count && i < particles.length; i++) {
           const idx = i * 3;
-          particleData.colors[idx] = result.colors[i].r;
-          particleData.colors[idx + 1] = result.colors[i].g;
-          particleData.colors[idx + 2] = result.colors[i].b;
+          particleData.colors[idx] = particles[i].color.r;
+          particleData.colors[idx + 1] = particles[i].color.g;
+          particleData.colors[idx + 2] = particles[i].color.b;
         }
         break;
       }
@@ -316,30 +319,36 @@ export class InteractionManager {
         // 应用霓虹多彩配色
         this.applyDiverseColors(ShapeType.TEXT);
         break;
-      case ShapeType.TORUS:
-        positions = this.shapeGenerator.generateTorus(count, 3.5, 1.2); // Increased for better visibility
+      case ShapeType.TORUS: {
+        const particles = this.shapeGenerator.generateTorusVolume(count, 3.5, 1.2); // 使用体积采样
+        positions = particles.map(p => p.position);
         // 应用彩虹渐变配色
         this.applyDiverseColors(ShapeType.TORUS);
         break;
-      case ShapeType.STAR:
-        positions = this.shapeGenerator.generateStar(count, 3.5, 1.4); // Increased for better visibility
+      }
+      case ShapeType.STAR: {
+        const particles = this.shapeGenerator.generateStarVolume(count, 3.5, 1.4); // 使用体积采样
+        positions = particles.map(p => p.position);
         // 应用金色系配色
         this.applyDiverseColors(ShapeType.STAR);
         break;
-      case ShapeType.HEART:
-        positions = this.shapeGenerator.generateHeart(count, 1.8); // Increased from 1.5 for better visibility
+      }
+      case ShapeType.HEART: {
+        const particles = this.shapeGenerator.generateHeartVolume(count, 1.8); // 使用体积采样
+        positions = particles.map(p => p.position);
         // 应用红粉色系配色
         this.applyDiverseColors(ShapeType.HEART);
         break;
+      }
       case ShapeType.ARROW_HEART: {
-        const result = this.shapeGenerator.generateArrowHeart(count, 1.8); // Increased from 1.5 for better visibility
-        positions = result.positions;
-        // 更新颜色为粉色
-        for (let i = 0; i < count; i++) {
+        const particles = this.shapeGenerator.generateArrowHeartVolume(count, 1.8); // 使用体积采样
+        positions = particles.map(p => p.position);
+        // 更新颜色为固定的粉色 (1.0, 0.5, 0.75)
+        for (let i = 0; i < count && i < particles.length; i++) {
           const idx = i * 3;
-          particleData.colors[idx] = result.colors[i].r;
-          particleData.colors[idx + 1] = result.colors[i].g;
-          particleData.colors[idx + 2] = result.colors[i].b;
+          particleData.colors[idx] = 1.0;
+          particleData.colors[idx + 1] = 0.5;
+          particleData.colors[idx + 2] = 0.75;
         }
         break;
       }

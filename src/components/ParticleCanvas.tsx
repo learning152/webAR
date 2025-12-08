@@ -401,14 +401,33 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
 
   /**
    * 处理粒子数量变化
+   * 重新初始化 ThreeEngine 和 PhysicsEngine，并触发形态过渡动画
    */
   const handleParticleCountChange = (newCount: number) => {
+    // 检查是否需要更新
+    if (newCount === currentParticleCount) {
+      return;
+    }
+
     console.log(`粒子数量变化: ${currentParticleCount} -> ${newCount}`);
+
+    // 1. 重新初始化 ThreeEngine
+    if (threeEngineRef.current) {
+      threeEngineRef.current.reinitializeParticles(newCount);
+    }
+
+    // 2. 重新初始化 PhysicsEngine
+    if (physicsEngineRef.current) {
+      physicsEngineRef.current.reinitialize(newCount);
+    }
+
+    // 3. 触发形态过渡动画到当前形态
+    if (interactionManagerRef.current) {
+      interactionManagerRef.current.triggerTransition(currentShape);
+    }
+
+    // 4. 更新 React 状态
     setCurrentParticleCount(newCount);
-    
-    // 注意：实际应用中，这里需要重新初始化物理引擎和渲染引擎
-    // 为了简化，这里只更新状态，实际重新初始化需要更复杂的逻辑
-    // 可以考虑在未来版本中实现动态粒子数量调整
   };
 
   /**

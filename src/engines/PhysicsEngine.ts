@@ -190,6 +190,8 @@ export interface PhysicsConfig {
   explosionDuration: number;        // Explosion duration in seconds (0.3)
 }
 
+import { ShapeType } from '../shapes/ShapeGenerator';
+
 /**
  * PhysicsEngine manages the particle system and physics simulation
  */
@@ -199,6 +201,7 @@ export class PhysicsEngine {
   private explosionActive: boolean = false;
   private explosionTimer: number = 0;
   private explosionCenter: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 };
+  private currentShapeType: ShapeType = ShapeType.PLANET;
   
   // Planet state tracking
   private planetCenter: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 };
@@ -231,6 +234,54 @@ export class PhysicsEngine {
    */
   public getParticleData(): ParticleData | null {
     return this.particleData;
+  }
+
+  /**
+   * Get the current particle count
+   * @returns Current particle count, or 0 if not initialized
+   */
+  public getParticleCount(): number {
+    return this.particleData ? this.particleData.getCount() : 0;
+  }
+
+  /**
+   * Set the current shape type
+   * @param shapeType - The shape type to set
+   */
+  public setCurrentShapeType(shapeType: ShapeType): void {
+    this.currentShapeType = shapeType;
+  }
+
+  /**
+   * Get the current shape type
+   * @returns Current shape type
+   */
+  public getCurrentShapeType(): ShapeType {
+    return this.currentShapeType;
+  }
+
+  /**
+   * Reinitialize the physics engine with a new particle count
+   * Preserves the current shape type setting
+   * @param newCount - New particle count
+   */
+  public reinitialize(newCount: number): void {
+    // Skip if count is the same
+    if (this.particleData && this.particleData.getCount() === newCount) {
+      return;
+    }
+
+    // Preserve current shape type
+    const preservedShapeType = this.currentShapeType;
+
+    // Create new particle data
+    this.particleData = new ParticleData(newCount);
+
+    // Restore shape type
+    this.currentShapeType = preservedShapeType;
+
+    // Reset planet state
+    this.resetPlanetState();
   }
   
   /**

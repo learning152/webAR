@@ -21,6 +21,41 @@ export class ThreeEngine {
   private animationId: number | null = null;
   private contextLostHandler: ((event: Event) => void) | null = null;
   private contextRestoredHandler: (() => void) | null = null;
+  private particleCount: number = 0;
+  
+  // Particle shape geometries (5 types)
+  private particleGeometries: any[] = [];
+  private instancedMeshes: any[] = [];
+
+  /**
+   * 创建5种不同的粒子几何体
+   * 0: 球体 (Sphere)
+   * 1: 立方体 (Box)
+   * 2: 四面体 (Tetrahedron)
+   * 3: 八面体 (Octahedron)
+   * 4: 圆环 (Torus)
+   */
+  private createParticleGeometries(): void {
+    if (!window.THREE) return;
+    
+    const THREE = window.THREE;
+    const baseSize = 0.05;
+    
+    // 0: Sphere
+    this.particleGeometries[0] = new THREE.SphereGeometry(baseSize, 8, 8);
+    
+    // 1: Box
+    this.particleGeometries[1] = new THREE.BoxGeometry(baseSize * 1.5, baseSize * 1.5, baseSize * 1.5);
+    
+    // 2: Tetrahedron
+    this.particleGeometries[2] = new THREE.TetrahedronGeometry(baseSize * 1.2);
+    
+    // 3: Octahedron
+    this.particleGeometries[3] = new THREE.OctahedronGeometry(baseSize * 1.2);
+    
+    // 4: Torus (small ring)
+    this.particleGeometries[4] = new THREE.TorusGeometry(baseSize * 0.8, baseSize * 0.3, 8, 12);
+  }
 
   /**
    * 初始化 Three.js 场景
@@ -33,6 +68,7 @@ export class ThreeEngine {
     }
 
     this.container = container;
+    this.particleCount = particleCount;
     const THREE = window.THREE;
 
     // 创建场景
@@ -220,6 +256,126 @@ export class ThreeEngine {
   }
 
   /**
+   * 更新粒子系统使用 ParticleAttributes 数组
+   * 支持不同的粒子大小、形状和颜色
+   * 
+   * 此方法使用实例化网格（InstancedMesh）来渲染不同形状的粒子，
+   * 相比点精灵系统提供更丰富的视觉效果。
+   * 
+   * 支持的形状类型：
+   * - 0: 球体 (Sphere)
+   * - 1: 立方体 (Box)
+   * - 2: 四面体 (Tetrahedron)
+   * - 3: 八面体 (Octahedron)
+   * - 4: 圆环 (Torus)
+   * 
+   * @param particles - ParticleAttributes 数组，每个粒子包含：
+   *   - position: { x, y, z } - 3D位置
+   *   - color: { r, g, b } - RGB颜色 (0-1范围)
+   *   - size: number - 大小倍数 (0.5-2.0)
+   *   - shapeType: number - 形状类型索引 (0-4)
+   * 
+   * @example
+   * ```typescript
+   * const particles = [
+   *   { position: { x: 0, y: 0, z: 0 }, color: { r: 1, g: 0, b: 0 }, size: 1.0, shapeType: 0 },
+   *   { position: { x: 1, y: 1, z: 1 }, color: { r: 0, g: 1, b: 0 }, size: 1.5, shapeType: 1 }
+   * ];
+   * engine.updateParticlesWithAttributes(particles);
+   * ```
+   */
+  public updateParticlesWithAttributes(particles: Array<{ position: { x: number; y: number; z: number }; color: { r: number; g: number; b: number }; size: number; shapeType: number }>): void {
+    if (!this.scene || !window.THREE) {
+      console.warn('场景未初始化或 Three.js 未加载');
+      return;
+    }
+
+    const THREE = window.THREE;
+
+    // 创建粒子几何体（如果还没有创建）
+    if (this.particleGeometries.length === 0) {
+      this.createParticleGeometries();
+    }
+
+    // 清理旧的实例化网格
+    this.clearInstancedMeshes();
+
+    // 按 shapeType 分组粒子
+    const particlesByShape: Map<number, typeof particles> = new Map();
+    for (let i = 0; i < 5; i++) {
+      particlesByShape.set(i, []);
+    }
+
+    particles.forEach(particle => {
+      const shapeType = Math.floor(particle.shapeType) % 5; // 确保在 0-4 范围内
+      particlesByShape.get(shapeType)!.push(particle);
+    });
+
+    // 为每种形状类型创建实例化网格
+    particlesByShape.forEach((shapeParticles, shapeType) => {
+      if (shapeParticles.length === 0) return;
+
+      const geometry = this.particleGeometries[shapeType];
+      const material = new THREE.MeshBasicMaterial({
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.9
+      });
+
+      const instancedMesh = new THREE.InstancedMesh(
+        geometry,
+        material,
+        shapeParticles.length
+      );
+
+      // 设置每个实例的变换矩阵和颜色
+      const matrix = new THREE.Matrix4();
+      const color = new THREE.Color();
+
+      shapeParticles.forEach((particle, index) => {
+        // 设置位置和缩放
+        matrix.makeScale(particle.size, particle.size, particle.size);
+        matrix.setPosition(particle.position.x, particle.position.y, particle.position.z);
+        instancedMesh.setMatrixAt(index, matrix);
+
+        // 设置颜色
+        color.setRGB(particle.color.r, particle.color.g, particle.color.b);
+        instancedMesh.setColorAt(index, color);
+      });
+
+      // 标记需要更新
+      instancedMesh.instanceMatrix.needsUpdate = true;
+      if (instancedMesh.instanceColor) {
+        instancedMesh.instanceColor.needsUpdate = true;
+      }
+
+      // 添加到场景
+      this.scene.add(instancedMesh);
+      this.instancedMeshes.push(instancedMesh);
+    });
+
+    // 隐藏旧的点精灵系统（如果存在）
+    if (this.points) {
+      this.points.visible = false;
+    }
+  }
+
+  /**
+   * 清理实例化网格
+   */
+  private clearInstancedMeshes(): void {
+    if (!this.scene) return;
+
+    this.instancedMeshes.forEach(mesh => {
+      this.scene.remove(mesh);
+      if (mesh.geometry) mesh.geometry.dispose();
+      if (mesh.material) mesh.material.dispose();
+    });
+
+    this.instancedMeshes = [];
+  }
+
+  /**
    * 处理窗口大小变化
    * @param width - 新的宽度
    * @param height - 新的高度
@@ -257,6 +413,15 @@ export class ThreeEngine {
       cancelAnimationFrame(this.animationId);
       this.animationId = null;
     }
+
+    // 清理实例化网格
+    this.clearInstancedMeshes();
+
+    // 清理粒子几何体
+    this.particleGeometries.forEach(geom => {
+      if (geom) geom.dispose();
+    });
+    this.particleGeometries = [];
 
     // 清理几何体
     if (this.geometry) {
@@ -340,18 +505,112 @@ export class ThreeEngine {
   }
 
   /**
+   * 获取当前粒子数量
+   * @returns 当前粒子数量
+   */
+  public getParticleCount(): number {
+    return this.particleCount;
+  }
+
+  /**
+   * 重新初始化粒子系统（动态调整粒子数量）
+   * 保持当前的旋转和缩放状态
+   * @param newCount - 新的粒子数量
+   */
+  public reinitializeParticles(newCount: number): void {
+    // 跳过相同数量的重新初始化
+    if (newCount === this.particleCount) {
+      return;
+    }
+
+    if (!window.THREE || !this.scene || !this.points) {
+      console.warn('ThreeEngine 未初始化，无法重新初始化粒子');
+      return;
+    }
+
+    const THREE = window.THREE;
+
+    // 1. 保存当前旋转和缩放状态
+    const savedRotation = {
+      x: this.points.rotation.x,
+      y: this.points.rotation.y,
+      z: this.points.rotation.z
+    };
+    const savedScale = this.points.scale.x;
+
+    // 2. 从场景中移除旧的粒子系统
+    this.scene.remove(this.points);
+
+    // 3. 释放旧的几何体
+    if (this.geometry) {
+      this.geometry.dispose();
+    }
+
+    // 4. 创建新的几何体和缓冲区
+    this.geometry = new THREE.BufferGeometry();
+    
+    const positions = new Float32Array(newCount * 3);
+    const colors = new Float32Array(newCount * 3);
+    const sizes = new Float32Array(newCount);
+
+    // 初始化粒子位置、颜色和大小
+    for (let i = 0; i < newCount; i++) {
+      const idx = i * 3;
+      
+      // 随机初始位置
+      positions[idx] = (Math.random() - 0.5) * 2;
+      positions[idx + 1] = (Math.random() - 0.5) * 2;
+      positions[idx + 2] = (Math.random() - 0.5) * 2;
+      
+      // 青色 (0, 1, 1)
+      colors[idx] = 0;
+      colors[idx + 1] = 1;
+      colors[idx + 2] = 1;
+      
+      // 5种不同大小的粒子
+      const sizeType = i % 5;
+      const baseSizes = [0.04, 0.06, 0.08, 0.05, 0.07];
+      sizes[i] = baseSizes[sizeType] * (0.8 + Math.random() * 0.4);
+    }
+
+    this.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    this.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    this.geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+    // 5. 创建新的粒子系统（复用材质）
+    this.points = new THREE.Points(this.geometry, this.material);
+
+    // 6. 恢复旋转和缩放状态
+    this.points.rotation.x = savedRotation.x;
+    this.points.rotation.y = savedRotation.y;
+    this.points.rotation.z = savedRotation.z;
+    this.points.scale.set(savedScale, savedScale, savedScale);
+
+    // 7. 添加到场景
+    this.scene.add(this.points);
+
+    // 8. 更新粒子数量
+    this.particleCount = newCount;
+  }
+
+  /**
    * 设置场景旋转
    * @param rotation - 旋转角度 { x, y, z } (弧度)
    */
   public setSceneRotation(rotation: { x: number; y: number; z: number }): void {
-    if (!this.points) {
-      console.warn('粒子系统未初始化');
-      return;
+    // 应用到点精灵系统
+    if (this.points) {
+      this.points.rotation.x = rotation.x;
+      this.points.rotation.y = rotation.y;
+      this.points.rotation.z = rotation.z;
     }
 
-    this.points.rotation.x = rotation.x;
-    this.points.rotation.y = rotation.y;
-    this.points.rotation.z = rotation.z;
+    // 应用到实例化网格
+    this.instancedMeshes.forEach(mesh => {
+      mesh.rotation.x = rotation.x;
+      mesh.rotation.y = rotation.y;
+      mesh.rotation.z = rotation.z;
+    });
   }
 
   /**
@@ -359,14 +618,19 @@ export class ThreeEngine {
    * @param delta - 旋转增量 { x, y, z } (弧度)
    */
   public addSceneRotation(delta: { x: number; y: number; z: number }): void {
-    if (!this.points) {
-      console.warn('粒子系统未初始化');
-      return;
+    // 应用到点精灵系统
+    if (this.points) {
+      this.points.rotation.x += delta.x;
+      this.points.rotation.y += delta.y;
+      this.points.rotation.z += delta.z;
     }
 
-    this.points.rotation.x += delta.x;
-    this.points.rotation.y += delta.y;
-    this.points.rotation.z += delta.z;
+    // 应用到实例化网格
+    this.instancedMeshes.forEach(mesh => {
+      mesh.rotation.x += delta.x;
+      mesh.rotation.y += delta.y;
+      mesh.rotation.z += delta.z;
+    });
   }
 
   /**
@@ -374,16 +638,26 @@ export class ThreeEngine {
    * @returns 当前旋转角度 { x, y, z } (弧度)
    */
   public getSceneRotation(): { x: number; y: number; z: number } {
-    if (!this.points) {
-      console.warn('粒子系统未初始化');
-      return { x: 0, y: 0, z: 0 };
+    // 优先从实例化网格获取
+    if (this.instancedMeshes.length > 0) {
+      const mesh = this.instancedMeshes[0];
+      return {
+        x: mesh.rotation.x,
+        y: mesh.rotation.y,
+        z: mesh.rotation.z
+      };
     }
 
-    return {
-      x: this.points.rotation.x,
-      y: this.points.rotation.y,
-      z: this.points.rotation.z
-    };
+    // 否则从点精灵系统获取
+    if (this.points) {
+      return {
+        x: this.points.rotation.x,
+        y: this.points.rotation.y,
+        z: this.points.rotation.z
+      };
+    }
+
+    return { x: 0, y: 0, z: 0 };
   }
 
   /**
@@ -391,15 +665,18 @@ export class ThreeEngine {
    * @param scale - 缩放比例 (0.1 到 10.0)
    */
   public setSceneScale(scale: number): void {
-    if (!this.points) {
-      console.warn('粒子系统未初始化');
-      return;
-    }
-
     // 限制缩放范围在 0.1 到 10.0 之间，支持更大的缩放效果
     const clampedScale = Math.max(0.1, Math.min(10.0, scale));
 
-    this.points.scale.set(clampedScale, clampedScale, clampedScale);
+    // 应用到点精灵系统
+    if (this.points) {
+      this.points.scale.set(clampedScale, clampedScale, clampedScale);
+    }
+
+    // 应用到实例化网格
+    this.instancedMeshes.forEach(mesh => {
+      mesh.scale.set(clampedScale, clampedScale, clampedScale);
+    });
   }
 
   /**
@@ -407,12 +684,16 @@ export class ThreeEngine {
    * @returns 当前缩放比例
    */
   public getSceneScale(): number {
-    if (!this.points) {
-      console.warn('粒子系统未初始化');
-      return 1.0;
+    // 优先从实例化网格获取
+    if (this.instancedMeshes.length > 0) {
+      return this.instancedMeshes[0].scale.x;
     }
 
-    // 返回 x 轴的缩放值（假设 xyz 缩放相同）
-    return this.points.scale.x;
+    // 否则从点精灵系统获取
+    if (this.points) {
+      return this.points.scale.x;
+    }
+
+    return 1.0;
   }
 }

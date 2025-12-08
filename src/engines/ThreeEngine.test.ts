@@ -157,6 +157,97 @@ describe('ThreeEngine', () => {
       expect(container.contains(canvas)).toBe(false);
     });
   });
+
+  describe('粒子变化支持', () => {
+    it('should create instanced meshes for different particle shapes', () => {
+      engine.initialize(container);
+      const scene = engine.getScene();
+
+      const particles = [
+        { position: { x: 0, y: 0, z: 0 }, color: { r: 1, g: 0, b: 0 }, size: 1.0, shapeType: 0 },
+        { position: { x: 1, y: 1, z: 1 }, color: { r: 0, g: 1, b: 0 }, size: 1.5, shapeType: 1 },
+        { position: { x: 2, y: 2, z: 2 }, color: { r: 0, g: 0, b: 1 }, size: 0.5, shapeType: 2 }
+      ];
+
+      engine.updateParticlesWithAttributes(particles);
+
+      // Should create particle geometries
+      expect(mockTHREE.SphereGeometry).toHaveBeenCalled();
+      expect(mockTHREE.BoxGeometry).toHaveBeenCalled();
+      expect(mockTHREE.TetrahedronGeometry).toHaveBeenCalled();
+      expect(mockTHREE.OctahedronGeometry).toHaveBeenCalled();
+      expect(mockTHREE.TorusGeometry).toHaveBeenCalled();
+
+      // Should create instanced meshes
+      expect(mockTHREE.InstancedMesh).toHaveBeenCalled();
+      
+      // Should add meshes to scene
+      expect(scene.add).toHaveBeenCalled();
+    });
+
+    it('should apply size and color attributes to particles', () => {
+      engine.initialize(container);
+
+      const particles = [
+        { position: { x: 0, y: 0, z: 0 }, color: { r: 1, g: 0.5, b: 0.2 }, size: 2.0, shapeType: 0 }
+      ];
+
+      engine.updateParticlesWithAttributes(particles);
+
+      // Should create matrix and color
+      expect(mockTHREE.Matrix4).toHaveBeenCalled();
+      expect(mockTHREE.Color).toHaveBeenCalled();
+    });
+
+    it('should hide point sprite system when using instanced meshes', () => {
+      engine.initialize(container);
+      const points = engine.getPoints();
+
+      const particles = [
+        { position: { x: 0, y: 0, z: 0 }, color: { r: 1, g: 0, b: 0 }, size: 1.0, shapeType: 0 }
+      ];
+
+      engine.updateParticlesWithAttributes(particles);
+
+      expect(points.visible).toBe(false);
+    });
+
+    it('should apply rotation to instanced meshes', () => {
+      engine.initialize(container);
+
+      const particles = [
+        { position: { x: 0, y: 0, z: 0 }, color: { r: 1, g: 0, b: 0 }, size: 1.0, shapeType: 0 }
+      ];
+
+      engine.updateParticlesWithAttributes(particles);
+      engine.setSceneRotation({ x: 1, y: 2, z: 3 });
+
+      const rotation = engine.getSceneRotation();
+      expect(rotation.x).toBe(1);
+      expect(rotation.y).toBe(2);
+      expect(rotation.z).toBe(3);
+    });
+
+    it('should apply scale to instanced meshes', () => {
+      engine.initialize(container);
+      const scene = engine.getScene();
+
+      const particles = [
+        { position: { x: 0, y: 0, z: 0 }, color: { r: 1, g: 0, b: 0 }, size: 1.0, shapeType: 0 }
+      ];
+
+      engine.updateParticlesWithAttributes(particles);
+      
+      // Get the instanced mesh that was added to the scene
+      const addCalls = scene.add.mock.calls;
+      const instancedMesh = addCalls[addCalls.length - 1][0];
+      
+      engine.setSceneScale(2.5);
+
+      // Verify scale.set was called with correct values
+      expect(instancedMesh.scale.set).toHaveBeenCalledWith(2.5, 2.5, 2.5);
+    });
+  });
 });
 
 // Helper function to create mock THREE object
@@ -208,9 +299,36 @@ function createMockTHREE() {
       geometry,
       material,
       rotation: { x: 0, y: 0, z: 0 },
-      scale: { x: 1, y: 1, z: 1, set: vi.fn() }
+      scale: { x: 1, y: 1, z: 1, set: vi.fn() },
+      visible: true
     })),
-    Color: vi.fn().mockImplementation((color: number) => color),
-    AdditiveBlending: 2
+    Color: vi.fn().mockImplementation((color?: number) => ({
+      setRGB: vi.fn()
+    })),
+    AdditiveBlending: 2,
+    // Geometry types for particle shapes
+    SphereGeometry: vi.fn().mockImplementation(() => ({ dispose: vi.fn() })),
+    BoxGeometry: vi.fn().mockImplementation(() => ({ dispose: vi.fn() })),
+    TetrahedronGeometry: vi.fn().mockImplementation(() => ({ dispose: vi.fn() })),
+    OctahedronGeometry: vi.fn().mockImplementation(() => ({ dispose: vi.fn() })),
+    TorusGeometry: vi.fn().mockImplementation(() => ({ dispose: vi.fn() })),
+    MeshBasicMaterial: vi.fn().mockImplementation(() => ({
+      dispose: vi.fn()
+    })),
+    InstancedMesh: vi.fn().mockImplementation((geometry: any, material: any, count: number) => ({
+      geometry,
+      material,
+      count,
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1, set: vi.fn() },
+      setMatrixAt: vi.fn(),
+      setColorAt: vi.fn(),
+      instanceMatrix: { needsUpdate: false },
+      instanceColor: { needsUpdate: false }
+    })),
+    Matrix4: vi.fn().mockImplementation(() => ({
+      makeScale: vi.fn().mockReturnThis(),
+      setPosition: vi.fn().mockReturnThis()
+    }))
   };
 }

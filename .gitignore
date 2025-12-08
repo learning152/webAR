@@ -11,6 +11,10 @@ node_modules
 dist
 dist-ssr
 *.local
+.kiro
+
+OPTIMIZATION_SUMMARY.md
+TEST_FIXES_SUMMARY.md
 
 # Editor directories and files
 .vscode/*
