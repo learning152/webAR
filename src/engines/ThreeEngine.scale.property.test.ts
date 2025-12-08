@@ -47,11 +47,12 @@ describe('ThreeEngine Scale Property Tests', () => {
    * 
    * For any slider value (within valid range), the scale should be proportionally
    * mapped, and scale values should be clamped within minimum and maximum boundaries.
+   * Note: Scale range extended to 0.1-10.0 for more dramatic zoom effects.
    */
   it('Property 4: scale slider values should map correctly and be clamped', () => {
     fc.assert(
       fc.property(
-        fc.float({ min: Math.fround(0), max: Math.fround(3), noNaN: true }),
+        fc.float({ min: Math.fround(0), max: Math.fround(15), noNaN: true }),
         (sliderValue) => {
           // Set the scale
           engine.setSceneScale(sliderValue);
@@ -59,23 +60,23 @@ describe('ThreeEngine Scale Property Tests', () => {
           // Get the resulting scale
           const result = engine.getSceneScale();
 
-          // Scale should be clamped between 0.5 and 2.0
-          expect(result).toBeGreaterThanOrEqual(0.5);
-          expect(result).toBeLessThanOrEqual(2.0);
+          // Scale should be clamped between 0.1 and 10.0 (extended range)
+          expect(result).toBeGreaterThanOrEqual(0.1);
+          expect(result).toBeLessThanOrEqual(10.0);
 
           // If slider value is within bounds, it should match
-          if (sliderValue >= 0.5 && sliderValue <= 2.0) {
+          if (sliderValue >= 0.1 && sliderValue <= 10.0) {
             expect(result).toBeCloseTo(sliderValue, 5);
           }
 
-          // If slider value is below minimum, should clamp to 0.5
-          if (sliderValue < 0.5) {
-            expect(result).toBeCloseTo(0.5, 5);
+          // If slider value is below minimum, should clamp to 0.1
+          if (sliderValue < 0.1) {
+            expect(result).toBeCloseTo(0.1, 5);
           }
 
-          // If slider value is above maximum, should clamp to 2.0
-          if (sliderValue > 2.0) {
-            expect(result).toBeCloseTo(2.0, 5);
+          // If slider value is above maximum, should clamp to 10.0
+          if (sliderValue > 10.0) {
+            expect(result).toBeCloseTo(10.0, 5);
           }
         }
       ),
@@ -89,7 +90,7 @@ describe('ThreeEngine Scale Property Tests', () => {
   it('should apply uniform scale across x, y, z axes', () => {
     fc.assert(
       fc.property(
-        fc.float({ min: Math.fround(0.5), max: Math.fround(2.0), noNaN: true }),
+        fc.float({ min: Math.fround(0.1), max: Math.fround(10.0), noNaN: true }),
         (scale) => {
           engine.setSceneScale(scale);
 
@@ -111,7 +112,7 @@ describe('ThreeEngine Scale Property Tests', () => {
   it('should retrieve the same scale value that was set', () => {
     fc.assert(
       fc.property(
-        fc.float({ min: Math.fround(0.5), max: Math.fround(2.0), noNaN: true }),
+        fc.float({ min: Math.fround(0.1), max: Math.fround(10.0), noNaN: true }),
         (scale) => {
           engine.setSceneScale(scale);
           const result = engine.getSceneScale();
@@ -160,7 +161,8 @@ function createMockTHREE() {
       setAttribute: vi.fn(),
       attributes: {
         position: { array: new Float32Array(100), needsUpdate: false },
-        color: { array: new Float32Array(100), needsUpdate: false }
+        color: { array: new Float32Array(100), needsUpdate: false },
+        size: { array: new Float32Array(100), needsUpdate: false }
       },
       dispose: vi.fn()
     })),
@@ -171,6 +173,10 @@ function createMockTHREE() {
     })),
     PointsMaterial: vi.fn().mockImplementation(() => ({
       dispose: vi.fn()
+    })),
+    ShaderMaterial: vi.fn().mockImplementation(() => ({
+      dispose: vi.fn(),
+      uniforms: {}
     })),
     Points: vi.fn().mockImplementation((geometry: any, material: any) => ({
       geometry,

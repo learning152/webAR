@@ -314,11 +314,18 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
             stateMachineRef.current.update(currentGesture, clampedDeltaTime);
           }
 
-          // 4. 更新交互管理器（挥手风暴和深度推拉）（仅在摄像头可用且模拟器未激活时）
-          if (interactionManagerRef.current && gestureEngineRef.current && !simulatorActive) {
-            const handData = gestureEngineRef.current.getHandData();
-            if (handData) {
-              interactionManagerRef.current.update(handData, clampedDeltaTime);
+          // 4. 更新交互管理器
+          if (interactionManagerRef.current) {
+            // 始终更新过渡状态（形态切换动画）
+            interactionManagerRef.current.updateTransition(clampedDeltaTime);
+            interactionManagerRef.current.updateFingerHeartSpread(clampedDeltaTime);
+            
+            // 挥手风暴和深度推拉仅在摄像头可用且模拟器未激活时
+            if (gestureEngineRef.current && !simulatorActive) {
+              const handData = gestureEngineRef.current.getHandData();
+              if (handData) {
+                interactionManagerRef.current.update(handData, clampedDeltaTime);
+              }
             }
           }
 

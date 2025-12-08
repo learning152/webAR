@@ -288,10 +288,12 @@ describe('Property 5: Scale transition smoothness', () => {
           fireEvent.change(slider, { target: { value: sliderValue.toString() } });
 
           // Property: Scale should be within bounds
-          // Note: onChange only fires when value actually changes from initial state (50)
+          // Note: The new scale system supports multipliers (1x, 3x, 5x)
+          // Base range is 0.3-2.0 at 1x multiplier (default)
+          // Maximum range is 1.5-10.0 at 5x multiplier
           expect(capturedScale).not.toBeNull();
-          expect(capturedScale!).toBeGreaterThanOrEqual(0.5);
-          expect(capturedScale!).toBeLessThanOrEqual(2.0);
+          expect(capturedScale!).toBeGreaterThanOrEqual(0.3); // BASE_MIN_SCALE * 1
+          expect(capturedScale!).toBeLessThanOrEqual(10.0);   // BASE_MAX_SCALE * 5
         }
       ),
       { numRuns: 100 }

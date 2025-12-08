@@ -62,11 +62,12 @@ export class ThreeEngine {
     // 创建粒子几何体
     this.geometry = new THREE.BufferGeometry();
 
-    // 初始化位置和颜色数组
+    // 初始化位置、颜色和大小数组
     const positions = new Float32Array(particleCount * 3);
     const colors = new Float32Array(particleCount * 3);
+    const sizes = new Float32Array(particleCount);
 
-    // 初始化粒子位置和颜色（青色）
+    // 初始化粒子位置、颜色（青色）和大小（5种不同大小）
     for (let i = 0; i < particleCount; i++) {
       const idx = i * 3;
       
@@ -79,19 +80,50 @@ export class ThreeEngine {
       colors[idx] = 0;
       colors[idx + 1] = 1;
       colors[idx + 2] = 1;
+      
+      // 5种不同大小的粒子，增加视觉多样性
+      const sizeType = i % 5;
+      const baseSizes = [0.04, 0.06, 0.08, 0.05, 0.07];
+      sizes[i] = baseSizes[sizeType] * (0.8 + Math.random() * 0.4);
     }
 
     this.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     this.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    this.geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
-    // 创建粒子材质 (optimized for better visibility)
-    this.material = new THREE.PointsMaterial({
-      size: 0.06,                    // Increased from 0.05 for better visibility
-      vertexColors: true,
+    // 创建自定义着色器材质支持不同大小的粒子
+    this.material = new THREE.ShaderMaterial({
+      uniforms: {
+        pointMultiplier: { value: window.devicePixelRatio * 100 }
+      },
+      vertexShader: `
+        attribute float size;
+        varying vec3 vColor;
+        void main() {
+          vColor = color;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = size * (300.0 / -mvPosition.z);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vColor;
+        void main() {
+          // 创建圆形粒子
+          vec2 center = gl_PointCoord - vec2(0.5);
+          float dist = length(center);
+          if (dist > 0.5) discard;
+          
+          // 添加发光效果
+          float alpha = 1.0 - smoothstep(0.3, 0.5, dist);
+          gl_FragColor = vec4(vColor, alpha * 0.9);
+        }
+      `,
       blending: THREE.AdditiveBlending,
+      depthTest: true,
+      depthWrite: false,
       transparent: true,
-      opacity: 0.85,                 // Increased from 0.8 for more vibrant appearance
-      sizeAttenuation: true
+      vertexColors: true
     });
 
     // 创建粒子系统
@@ -168,6 +200,23 @@ export class ThreeEngine {
     const colorAttribute = this.geometry.attributes.color;
     colorAttribute.array = colors;
     colorAttribute.needsUpdate = true;
+  }
+
+  /**
+   * 更新粒子大小
+   * @param sizes - 新的大小数据 Float32Array
+   */
+  public updateSizes(sizes: Float32Array): void {
+    if (!this.geometry) {
+      console.warn('几何体未初始化');
+      return;
+    }
+
+    const sizeAttribute = this.geometry.attributes.size;
+    if (sizeAttribute) {
+      sizeAttribute.array = sizes;
+      sizeAttribute.needsUpdate = true;
+    }
   }
 
   /**
@@ -339,7 +388,7 @@ export class ThreeEngine {
 
   /**
    * 设置场景缩放
-   * @param scale - 缩放比例 (0.5 到 2.0)
+   * @param scale - 缩放比例 (0.1 到 10.0)
    */
   public setSceneScale(scale: number): void {
     if (!this.points) {
@@ -347,8 +396,8 @@ export class ThreeEngine {
       return;
     }
 
-    // 限制缩放范围在 0.5 到 2.0 之间
-    const clampedScale = Math.max(0.5, Math.min(2.0, scale));
+    // 限制缩放范围在 0.1 到 10.0 之间，支持更大的缩放效果
+    const clampedScale = Math.max(0.1, Math.min(10.0, scale));
 
     this.points.scale.set(clampedScale, clampedScale, clampedScale);
   }

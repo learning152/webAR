@@ -120,6 +120,7 @@ describe('ShapeGenerator Property-Based Tests', () => {
    * 
    * For any text pixel data and particle count, all particles should be
    * assigned to valid sampling points on the text shape.
+   * Note: Text now has 3D extrusion effect with z-depth for visual enhancement.
    */
   it('Property 10: text shape particle distribution', () => {
     fc.assert(
@@ -147,8 +148,9 @@ describe('ShapeGenerator Property-Based Tests', () => {
             expect(Number.isFinite(pos.y)).toBe(true);
             expect(Number.isFinite(pos.z)).toBe(true);
             
-            // Verify z coordinate is 0 (text is flat in XY plane)
-            expect(Math.abs(pos.z)).toBeLessThan(0.1);
+            // Verify z coordinate is within 3D extrusion depth range (text has depth for 3D effect)
+            // Text extrusion depth is 0.4, so z should be within [-0.2, 0.2]
+            expect(Math.abs(pos.z)).toBeLessThanOrEqual(0.25);
           }
           
           // Verify particles are distributed (not all at the same position)
@@ -181,6 +183,7 @@ describe('ShapeGenerator Property-Based Tests', () => {
    * Validates: Requirements 9.1
    * 
    * For any particle in finger heart state, its color should be changed to pink.
+   * Note: Arrow heart now has 3D depth for visual enhancement.
    */
   it('Property 15: finger heart pink coloring', () => {
     fc.assert(
@@ -235,8 +238,10 @@ describe('ShapeGenerator Property-Based Tests', () => {
             expect(Number.isFinite(pos.y)).toBe(true);
             expect(Number.isFinite(pos.z)).toBe(true);
             
-            // Verify z coordinate is 0 (arrow heart is flat in XY plane)
-            expect(pos.z).toBe(0);
+            // Arrow heart has 3D depth for visual enhancement
+            // Heart part has dome depth up to 0.6*scale, arrow has depth up to 0.15*scale
+            const maxDepth = 0.6 * scale + 0.1; // Allow some margin
+            expect(Math.abs(pos.z)).toBeLessThanOrEqual(maxDepth);
           }
         }
       ),
@@ -249,7 +254,8 @@ describe('ShapeGenerator Property-Based Tests', () => {
    * Validates: Requirements 8.1, 8.5
    * 
    * For any generated heart positions, all points should be within the
-   * mathematically defined heart region.
+   * mathematically defined heart region (in XY plane).
+   * Note: Heart now has 3D dome depth for visual enhancement.
    */
   it('Property 14: heart region filling', () => {
     fc.assert(
@@ -277,11 +283,13 @@ describe('ShapeGenerator Property-Based Tests', () => {
             expect(Number.isFinite(pos.y)).toBe(true);
             expect(Number.isFinite(pos.z)).toBe(true);
             
-            // Verify z coordinate is 0 (heart is flat in XY plane)
-            expect(pos.z).toBe(0);
+            // Heart has 3D dome depth for visual enhancement
+            // Dome depth is 0.6 * scale, with some particles on back side at -0.3 * scale
+            const maxDepth = 0.6 * scale + 0.1; // Allow some margin
+            expect(Math.abs(pos.z)).toBeLessThanOrEqual(maxDepth);
           }
           
-          // Verify all points are within the heart's mathematical definition
+          // Verify all points are within the heart's mathematical definition (in XY plane)
           // This is the core property: all generated points must be inside the heart
           for (let i = 0; i < count; i++) {
             const pos = positions[i];
@@ -312,7 +320,7 @@ describe('ShapeGenerator Property-Based Tests', () => {
               boundaryPoints.push({ x: scaledX, y: scaledY });
             }
             
-            // Ray casting algorithm to verify point is inside heart
+            // Ray casting algorithm to verify point is inside heart (XY plane projection)
             let inside = false;
             const n = boundaryPoints.length;
             
@@ -330,7 +338,7 @@ describe('ShapeGenerator Property-Based Tests', () => {
               }
             }
             
-            // All points must be inside the heart region
+            // All points must be inside the heart region (XY projection)
             expect(inside).toBe(true);
           }
           

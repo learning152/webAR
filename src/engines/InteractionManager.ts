@@ -313,23 +313,23 @@ export class InteractionManager {
       }
       case ShapeType.TEXT:
         positions = this.shapeGenerator.generateText("我是ai", count);
-        // 保持青色
-        this.resetToCyanColor();
+        // 应用霓虹多彩配色
+        this.applyDiverseColors(ShapeType.TEXT);
         break;
       case ShapeType.TORUS:
         positions = this.shapeGenerator.generateTorus(count, 3.5, 1.2); // Increased for better visibility
-        // 保持青色
-        this.resetToCyanColor();
+        // 应用彩虹渐变配色
+        this.applyDiverseColors(ShapeType.TORUS);
         break;
       case ShapeType.STAR:
         positions = this.shapeGenerator.generateStar(count, 3.5, 1.4); // Increased for better visibility
-        // 保持青色
-        this.resetToCyanColor();
+        // 应用金色系配色
+        this.applyDiverseColors(ShapeType.STAR);
         break;
       case ShapeType.HEART:
         positions = this.shapeGenerator.generateHeart(count, 1.8); // Increased from 1.5 for better visibility
-        // 保持青色
-        this.resetToCyanColor();
+        // 应用红粉色系配色
+        this.applyDiverseColors(ShapeType.HEART);
         break;
       case ShapeType.ARROW_HEART: {
         const result = this.shapeGenerator.generateArrowHeart(count, 1.8); // Increased from 1.5 for better visibility
@@ -376,6 +376,95 @@ export class InteractionManager {
       particleData.colors[idx] = 0;     // r
       particleData.colors[idx + 1] = 1; // g (cyan)
       particleData.colors[idx + 2] = 1; // b (cyan)
+    }
+  }
+  
+  /**
+   * 为粒子应用多样化颜色
+   * 5种不同的颜色类型，每种颜色代表不同的粒子类型
+   * @param shapeType - 形态类型，不同形态使用不同的配色方案
+   */
+  private applyDiverseColors(shapeType: ShapeType): void {
+    if (!this.physicsEngine) {
+      return;
+    }
+    
+    const particleData = this.physicsEngine.getParticleData();
+    if (!particleData) {
+      return;
+    }
+    
+    const count = particleData.getCount();
+    
+    // 定义5种粒子颜色配色方案（根据形态不同）
+    type ColorPalette = Array<{ r: number; g: number; b: number }>;
+    
+    let palette: ColorPalette;
+    
+    switch (shapeType) {
+      case ShapeType.TEXT:
+        // 文字：霓虹色系 - 青、紫、蓝、绿、白
+        palette = [
+          { r: 0, g: 1, b: 1 },       // 青色
+          { r: 0.8, g: 0.2, b: 1 },   // 紫色
+          { r: 0.2, g: 0.6, b: 1 },   // 蓝色
+          { r: 0.2, g: 1, b: 0.6 },   // 绿色
+          { r: 0.9, g: 0.95, b: 1 },  // 白色
+        ];
+        break;
+      case ShapeType.TORUS:
+        // 圆环：彩虹渐变色系
+        palette = [
+          { r: 1, g: 0.3, b: 0.3 },   // 红色
+          { r: 1, g: 0.7, b: 0.2 },   // 橙色
+          { r: 0.2, g: 1, b: 0.5 },   // 绿色
+          { r: 0.3, g: 0.7, b: 1 },   // 蓝色
+          { r: 0.8, g: 0.3, b: 1 },   // 紫色
+        ];
+        break;
+      case ShapeType.STAR:
+        // 星形：金色系 - 金、黄、橙、白、淡金
+        palette = [
+          { r: 1, g: 0.85, b: 0.2 },  // 金色
+          { r: 1, g: 1, b: 0.4 },     // 亮黄
+          { r: 1, g: 0.6, b: 0.2 },   // 橙色
+          { r: 1, g: 0.95, b: 0.8 },  // 白金
+          { r: 0.9, g: 0.75, b: 0.4 },// 淡金
+        ];
+        break;
+      case ShapeType.HEART:
+        // 爱心：红粉色系
+        palette = [
+          { r: 1, g: 0.2, b: 0.4 },   // 红色
+          { r: 1, g: 0.5, b: 0.6 },   // 粉红
+          { r: 1, g: 0.3, b: 0.5 },   // 玫红
+          { r: 1, g: 0.7, b: 0.8 },   // 浅粉
+          { r: 0.9, g: 0.4, b: 0.6 }, // 深粉
+        ];
+        break;
+      default:
+        // 默认青色系
+        palette = [
+          { r: 0, g: 1, b: 1 },
+          { r: 0.2, g: 0.8, b: 1 },
+          { r: 0, g: 0.9, b: 0.9 },
+          { r: 0.3, g: 1, b: 0.9 },
+          { r: 0.1, g: 0.7, b: 1 },
+        ];
+    }
+    
+    // 为每个粒子分配颜色（基于粒子索引分配不同类型）
+    for (let i = 0; i < count; i++) {
+      const idx = i * 3;
+      // 使用粒子索引决定颜色类型，添加一些随机性
+      const colorIndex = (i + Math.floor(Math.random() * 2)) % 5;
+      const color = palette[colorIndex];
+      
+      // 添加轻微的颜色变化增加多样性
+      const variation = 0.1;
+      particleData.colors[idx] = Math.min(1, Math.max(0, color.r + (Math.random() - 0.5) * variation));
+      particleData.colors[idx + 1] = Math.min(1, Math.max(0, color.g + (Math.random() - 0.5) * variation));
+      particleData.colors[idx + 2] = Math.min(1, Math.max(0, color.b + (Math.random() - 0.5) * variation));
     }
   }
   

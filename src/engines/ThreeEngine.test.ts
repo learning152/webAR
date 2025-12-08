@@ -187,7 +187,8 @@ function createMockTHREE() {
       setAttribute: vi.fn(),
       attributes: {
         position: { array: new Float32Array(100), needsUpdate: false },
-        color: { array: new Float32Array(100), needsUpdate: false }
+        color: { array: new Float32Array(100), needsUpdate: false },
+        size: { array: new Float32Array(100), needsUpdate: false }
       },
       dispose: vi.fn()
     })),
@@ -199,9 +200,15 @@ function createMockTHREE() {
     PointsMaterial: vi.fn().mockImplementation(() => ({
       dispose: vi.fn()
     })),
+    ShaderMaterial: vi.fn().mockImplementation(() => ({
+      dispose: vi.fn(),
+      uniforms: {}
+    })),
     Points: vi.fn().mockImplementation((geometry: any, material: any) => ({
       geometry,
-      material
+      material,
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1, set: vi.fn() }
     })),
     Color: vi.fn().mockImplementation((color: number) => color),
     AdditiveBlending: 2

@@ -47,16 +47,31 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({
   // Rotation speed (radians per key press)
   const ROTATION_SPEED = 0.05;
 
-  // Scale state (slider value 0-100, maps to scale 0.5-2.0)
-  const [sliderValue, setSliderValue] = useState(50); // 50 = scale 1.0 (middle)
+  // Scale state - 支持更大的缩放范围
+  const [scaleMultiplier, setScaleMultiplier] = useState(1); // 1x, 3x, 5x 倍数
+  const [sliderValue, setSliderValue] = useState(50); // 滑块值 0-100
   
-  // Scale bounds
-  const MIN_SCALE = 0.5;
-  const MAX_SCALE = 2.0;
+  // 基础缩放范围
+  const BASE_MIN_SCALE = 0.3;
+  const BASE_MAX_SCALE = 2.0;
 
-  // Map slider value (0-100) to scale (0.5-2.0)
-  const sliderToScale = (value: number): number => {
-    return MIN_SCALE + (value / 100) * (MAX_SCALE - MIN_SCALE);
+  // 根据倍数计算实际缩放范围
+  const getScaleRange = (multiplier: number) => {
+    return {
+      min: BASE_MIN_SCALE * multiplier,
+      max: BASE_MAX_SCALE * multiplier
+    };
+  };
+
+  // Map slider value (0-100) to scale
+  const sliderToScale = (value: number, multiplier: number): number => {
+    const range = getScaleRange(multiplier);
+    return range.min + (value / 100) * (range.max - range.min);
+  };
+
+  // 获取当前实际缩放值
+  const getCurrentScale = (): number => {
+    return sliderToScale(sliderValue, scaleMultiplier);
   };
 
   // Handle scale slider change
@@ -64,7 +79,15 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({
     const value = parseInt(event.target.value, 10);
     setSliderValue(value);
     
-    const scale = sliderToScale(value);
+    const scale = sliderToScale(value, scaleMultiplier);
+    onScaleChange(scale);
+  };
+
+  // Handle scale multiplier change
+  const handleMultiplierChange = (multiplier: number) => {
+    setScaleMultiplier(multiplier);
+    // 重新计算缩放值
+    const scale = sliderToScale(sliderValue, multiplier);
     onScaleChange(scale);
   };
 
@@ -194,9 +217,21 @@ export const GestureSimulator: React.FC<GestureSimulatorProps> = ({
         <div className="section">
           <h4>缩放控制</h4>
           <div className="scale-control">
+            {/* 缩放倍数选择按钮 */}
+            <div className="scale-multiplier-buttons">
+              {[1, 3, 5].map((mult) => (
+                <button
+                  key={mult}
+                  className={`multiplier-button ${scaleMultiplier === mult ? 'active' : ''}`}
+                  onClick={() => handleMultiplierChange(mult)}
+                >
+                  {mult}x
+                </button>
+              ))}
+            </div>
             <div className="scale-labels">
               <span className="scale-label">小</span>
-              <span className="scale-value">{sliderToScale(sliderValue).toFixed(2)}x</span>
+              <span className="scale-value">{getCurrentScale().toFixed(2)}x</span>
               <span className="scale-label">大</span>
             </div>
             <input

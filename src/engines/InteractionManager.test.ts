@@ -322,7 +322,7 @@ describe('InteractionManager', () => {
       expect(particle.color.b).toBeCloseTo(0.75, 1);
     });
     
-    it('should maintain cyan color for non-special shapes', () => {
+    it('should apply diverse colors for non-special shapes', () => {
       const particleData = engine.getParticleData()!;
       
       // Trigger transition to torus
@@ -334,11 +334,14 @@ describe('InteractionManager', () => {
         manager.update(null, deltaTime);
       }
       
-      // Check that colors are cyan (0, 1, 1)
+      // Check that colors are valid RGB values (diverse colors now applied)
       const particle = particleData.getParticle(0);
-      expect(particle.color.r).toBeCloseTo(0, 1);
-      expect(particle.color.g).toBeCloseTo(1, 1);
-      expect(particle.color.b).toBeCloseTo(1, 1);
+      expect(particle.color.r).toBeGreaterThanOrEqual(0);
+      expect(particle.color.r).toBeLessThanOrEqual(1);
+      expect(particle.color.g).toBeGreaterThanOrEqual(0);
+      expect(particle.color.g).toBeLessThanOrEqual(1);
+      expect(particle.color.b).toBeGreaterThanOrEqual(0);
+      expect(particle.color.b).toBeLessThanOrEqual(1);
     });
   });
   

@@ -22,12 +22,15 @@ describe('ShapeGenerator Unit Tests', () => {
       }
     });
 
-    it('should generate flat star in XY plane (z = 0)', () => {
+    it('should generate 3D star with depth variation', () => {
       const generator = new ShapeGenerator();
       const positions = generator.generateStar(100, 3.0, 1.2);
       
+      // 3D shapes now have depth variation
       for (const pos of positions) {
-        expect(pos.z).toBe(0);
+        expect(Number.isFinite(pos.z)).toBe(true);
+        // Z values should be within reasonable depth range
+        expect(Math.abs(pos.z)).toBeLessThan(2.0);
       }
     });
 
@@ -180,12 +183,15 @@ describe('ShapeGenerator Unit Tests', () => {
       }
     });
 
-    it('should generate flat shape in XY plane (z = 0)', () => {
+    it('should generate 3D shape with depth variation', () => {
       const generator = new ShapeGenerator();
       const result = generator.generateArrowHeart(100, 1.5);
       
+      // 3D shapes now have depth variation
       for (const pos of result.positions) {
-        expect(pos.z).toBe(0);
+        expect(Number.isFinite(pos.z)).toBe(true);
+        // Z values should be within reasonable depth range
+        expect(Math.abs(pos.z)).toBeLessThan(1.0);
       }
     });
 
@@ -262,12 +268,15 @@ describe('ShapeGenerator Unit Tests', () => {
       }
     });
 
-    it('should generate flat heart in XY plane (z = 0)', () => {
+    it('should generate 3D heart with depth variation', () => {
       const generator = new ShapeGenerator();
       const positions = generator.generateHeart(100, 1.5);
       
+      // 3D shapes now have depth variation
       for (const pos of positions) {
-        expect(pos.z).toBe(0);
+        expect(Number.isFinite(pos.z)).toBe(true);
+        // Z values should be within reasonable depth range
+        expect(Math.abs(pos.z)).toBeLessThan(2.0);
       }
     });
 

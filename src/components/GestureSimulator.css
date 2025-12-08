@@ -1,5 +1,6 @@
 /**
  * GestureSimulator 样式
+ * 优化版本：添加动画过渡效果和响应式布局
  */
 
 .gesture-simulator {
@@ -8,15 +9,30 @@
   right: 20px;
   background: rgba(20, 20, 30, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  padding: 20px;
-  min-width: 300px;
-  max-width: 400px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 24px;
+  min-width: 320px;
+  max-width: 420px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
   z-index: 1000;
   color: white;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  
+  /* 入场动画 */
+  animation: slideInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: bottom right;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .gesture-simulator-header {
@@ -42,18 +58,37 @@
   font-size: 24px;
   cursor: pointer;
   padding: 0;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
-  transition: all 0.2s ease;
+  border-radius: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.close-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.close-button:hover::before {
+  opacity: 1;
 }
 
 .close-button:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.95);
+  transform: rotate(90deg);
+}
+
+.close-button:active {
+  transform: rotate(90deg) scale(0.9);
 }
 
 .gesture-simulator-content {
@@ -90,44 +125,89 @@
 
 .shape-button {
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 14px 12px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  transition: all 0.2s ease;
+  gap: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   color: rgba(255, 255, 255, 0.8);
+  position: relative;
+  overflow: hidden;
+}
+
+.shape-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.shape-button:hover::before {
+  opacity: 1;
 }
 
 .shape-button:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.shape-button:active {
+  transform: translateY(-1px) scale(0.98);
 }
 
 .shape-button.active {
-  background: rgba(0, 200, 255, 0.2);
-  border-color: rgba(0, 200, 255, 0.5);
-  color: rgba(0, 200, 255, 1);
+  background: linear-gradient(135deg, rgba(0, 200, 255, 0.25) 0%, rgba(0, 150, 255, 0.2) 100%);
+  border-color: rgba(0, 200, 255, 0.6);
+  color: rgba(0, 220, 255, 1);
+  box-shadow: 0 0 20px rgba(0, 200, 255, 0.3), inset 0 0 20px rgba(0, 200, 255, 0.1);
+}
+
+.shape-button.active::before {
+  opacity: 0;
 }
 
 .shape-button.active:hover {
-  background: rgba(0, 200, 255, 0.25);
-  border-color: rgba(0, 200, 255, 0.6);
+  background: linear-gradient(135deg, rgba(0, 200, 255, 0.3) 0%, rgba(0, 150, 255, 0.25) 100%);
+  border-color: rgba(0, 200, 255, 0.7);
+  box-shadow: 0 0 24px rgba(0, 200, 255, 0.4), inset 0 0 20px rgba(0, 200, 255, 0.15);
 }
 
 .shape-icon {
-  font-size: 28px;
+  font-size: 32px;
   line-height: 1;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.shape-button:hover .shape-icon {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.shape-button.active .shape-icon {
+  animation: iconPulse 2s ease-in-out infinite;
+}
+
+@keyframes iconPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
 }
 
 .shape-label {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   text-align: center;
+  letter-spacing: 0.3px;
 }
 
 
@@ -157,24 +237,73 @@
 }
 
 .arrow-key {
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.9);
   user-select: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+}
+
+.arrow-key:hover {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.06) 100%);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 
 .scale-control {
   display: flex;
   flex-direction: column;
+  gap: 12px;
+}
+
+/* 缩放倍数按钮组 */
+.scale-multiplier-buttons {
+  display: flex;
   gap: 8px;
+  justify-content: center;
+}
+
+.multiplier-button {
+  flex: 1;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.multiplier-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
+}
+
+.multiplier-button.active {
+  background: linear-gradient(135deg, rgba(255, 180, 0, 0.3) 0%, rgba(255, 140, 0, 0.25) 100%);
+  border-color: rgba(255, 180, 0, 0.7);
+  color: rgba(255, 200, 50, 1);
+  box-shadow: 0 0 16px rgba(255, 180, 0, 0.3), inset 0 0 12px rgba(255, 180, 0, 0.1);
+}
+
+.multiplier-button.active:hover {
+  background: linear-gradient(135deg, rgba(255, 180, 0, 0.35) 0%, rgba(255, 140, 0, 0.3) 100%);
+  border-color: rgba(255, 180, 0, 0.8);
+  box-shadow: 0 0 20px rgba(255, 180, 0, 0.4), inset 0 0 12px rgba(255, 180, 0, 0.15);
 }
 
 .scale-labels {
@@ -210,32 +339,155 @@
 .scale-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: rgba(0, 200, 255, 1);
+  background: linear-gradient(135deg, rgba(0, 220, 255, 1) 0%, rgba(0, 180, 255, 1) 100%);
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0, 200, 255, 0.4);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 3px 12px rgba(0, 200, 255, 0.5), 0 0 0 3px rgba(0, 200, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
 .scale-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-  box-shadow: 0 2px 12px rgba(0, 200, 255, 0.6);
+  transform: scale(1.25);
+  box-shadow: 0 4px 16px rgba(0, 200, 255, 0.7), 0 0 0 4px rgba(0, 200, 255, 0.3);
+}
+
+.scale-slider::-webkit-slider-thumb:active {
+  transform: scale(1.1);
 }
 
 .scale-slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: rgba(0, 200, 255, 1);
+  background: linear-gradient(135deg, rgba(0, 220, 255, 1) 0%, rgba(0, 180, 255, 1) 100%);
   cursor: pointer;
-  border: none;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0, 200, 255, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 3px 12px rgba(0, 200, 255, 0.5), 0 0 0 3px rgba(0, 200, 255, 0.2);
 }
 
 .scale-slider::-moz-range-thumb:hover {
-  transform: scale(1.2);
-  box-shadow: 0 2px 12px rgba(0, 200, 255, 0.6);
+  transform: scale(1.25);
+  box-shadow: 0 4px 16px rgba(0, 200, 255, 0.7), 0 0 0 4px rgba(0, 200, 255, 0.3);
+}
+
+.scale-slider::-moz-range-thumb:active {
+  transform: scale(1.1);
+}
+
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .gesture-simulator {
+    bottom: 10px;
+    right: 10px;
+    left: 10px;
+    min-width: unset;
+    max-width: unset;
+    padding: 20px;
+    border-radius: 12px;
+  }
+
+  .shape-buttons {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .shape-button {
+    padding: 10px 8px;
+    gap: 6px;
+  }
+
+  .shape-icon {
+    font-size: 28px;
+  }
+
+  .shape-label {
+    font-size: 11px;
+  }
+
+  .arrow-key {
+    width: 38px;
+    height: 38px;
+    font-size: 20px;
+  }
+
+  .section h4 {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .gesture-simulator {
+    padding: 16px;
+  }
+
+  .gesture-simulator-header h3 {
+    font-size: 16px;
+  }
+
+  .shape-buttons {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .shape-button {
+    padding: 12px 10px;
+  }
+
+  .arrow-key {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+}
+
+/* 平板横屏优化 */
+@media (min-width: 769px) and (max-width: 1024px) and (orientation: landscape) {
+  .gesture-simulator {
+    max-width: 380px;
+  }
+}
+
+/* 高分辨率屏幕优化 */
+@media (min-width: 1920px) {
+  .gesture-simulator {
+    max-width: 460px;
+    padding: 28px;
+  }
+
+  .shape-icon {
+    font-size: 36px;
+  }
+
+  .shape-label {
+    font-size: 14px;
+  }
+}
+
+/* 减少动画效果（用户偏好） */
+@media (prefers-reduced-motion: reduce) {
+  .gesture-simulator,
+  .shape-button,
+  .close-button,
+  .arrow-key,
+  .scale-slider::-webkit-slider-thumb,
+  .scale-slider::-moz-range-thumb {
+    animation: none;
+    transition: none;
+  }
+
+  .shape-button.active .shape-icon {
+    animation: none;
+  }
+}
+
+/* 深色模式优化（如果需要） */
+@media (prefers-color-scheme: dark) {
+  .gesture-simulator {
+    background: rgba(15, 15, 25, 0.97);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
 }

@@ -248,7 +248,15 @@ export class ShapeGenerator {
         // Calculate position using barycentric interpolation
         const x = r1 * v0.x + r2 * v1.x + r3 * v2.x;
         const y = r1 * v0.y + r2 * v1.y + r3 * v2.y;
-        const z = 0; // Star is flat in XY plane
+        // Add 3D depth based on distance from center (dome effect)
+        const distFromCenter = Math.sqrt(x * x + y * y);
+        const maxDist = outerRadius;
+        const normalizedDist = Math.min(distFromCenter / maxDist, 1);
+        // Create a dome shape with random variation
+        const depth = 0.8;
+        const baseZ = depth * (1 - normalizedDist * normalizedDist) * (Math.random() * 0.5 + 0.5);
+        // Randomly place some particles on the back side for volume
+        const z = Math.random() > 0.5 ? baseZ : -baseZ * 0.5;
         
         positions.push({ x, y, z });
         particlesGenerated++;
@@ -269,10 +277,17 @@ export class ShapeGenerator {
       }
       const r3 = 1 - r1 - r2;
       
+      const px = r1 * v0.x + r2 * v1.x + r3 * v2.x;
+      const py = r1 * v0.y + r2 * v1.y + r3 * v2.y;
+      const distFromCenter = Math.sqrt(px * px + py * py);
+      const normalizedDist = Math.min(distFromCenter / outerRadius, 1);
+      const depth = 0.8;
+      const baseZ = depth * (1 - normalizedDist * normalizedDist) * (Math.random() * 0.5 + 0.5);
+      
       positions.push({
-        x: r1 * v0.x + r2 * v1.x + r3 * v2.x,
-        y: r1 * v0.y + r2 * v1.y + r3 * v2.y,
-        z: 0
+        x: px,
+        y: py,
+        z: Math.random() > 0.5 ? baseZ : -baseZ * 0.5
       });
     }
     
@@ -402,14 +417,24 @@ export class ShapeGenerator {
       
       // Check if point is inside the heart using ray casting
       if (this.isPointInHeart(x, y, scale)) {
-        positions.push({ x, y, z: 0 });
+        // Add 3D depth based on distance from center (dome effect)
+        const distFromCenter = Math.sqrt(x * x + y * y);
+        const maxDist = scale * 1.2;
+        const normalizedDist = Math.min(distFromCenter / maxDist, 1);
+        const depth = 0.6 * scale;
+        const baseZ = depth * (1 - normalizedDist * normalizedDist) * (Math.random() * 0.5 + 0.5);
+        const z = Math.random() > 0.5 ? baseZ : -baseZ * 0.5;
+        
+        positions.push({ x, y, z });
       }
     }
     
     // If we couldn't generate enough particles (unlikely), fill remaining with boundary points
     while (positions.length < count) {
       const randomBoundaryPoint = boundaryPoints[Math.floor(Math.random() * boundaryPoints.length)];
-      positions.push({ ...randomBoundaryPoint });
+      const depth = 0.3 * scale;
+      const z = (Math.random() - 0.5) * depth;
+      positions.push({ x: randomBoundaryPoint.x, y: randomBoundaryPoint.y, z });
     }
     
     return positions;
@@ -530,20 +555,18 @@ export class ShapeGenerator {
     const shaftParticleCount = Math.floor(count * 0.6);
     const headParticleCount = count - shaftParticleCount;
     
-    // Generate arrow shaft (rectangular)
+    // Generate arrow shaft (rectangular with 3D depth)
+    const shaftDepth = 0.1 * scale;
     for (let i = 0; i < shaftParticleCount; i++) {
       const x = shaftStart + Math.random() * (shaftEnd - shaftStart);
       const y = (Math.random() - 0.5) * shaftWidth;
-      const z = 0;
+      const z = (Math.random() - 0.5) * shaftDepth;
       
       positions.push({ x, y, z });
     }
     
-    // Generate arrow head (triangle)
-    // Arrow head vertices:
-    // - Tip: (arrowTip, 0)
-    // - Top base: (shaftEnd, headWidth/2)
-    // - Bottom base: (shaftEnd, -headWidth/2)
+    // Generate arrow head (triangle with 3D depth)
+    const headDepth = 0.15 * scale;
     for (let i = 0; i < headParticleCount; i++) {
       // Use barycentric coordinates for triangle sampling
       let r1 = Math.random();
@@ -563,7 +586,7 @@ export class ShapeGenerator {
       
       const x = r1 * v0.x + r2 * v1.x + r3 * v2.x;
       const y = r1 * v0.y + r2 * v1.y + r3 * v2.y;
-      const z = 0;
+      const z = (Math.random() - 0.5) * headDepth;
       
       positions.push({ x, y, z });
     }
@@ -626,7 +649,9 @@ export class ShapeGenerator {
           // Center the text and scale it appropriately
           const xPos = (x - canvasWidth / 2) / 50; // Scale down
           const yPos = -(y - canvasHeight / 2) / 50; // Flip Y and scale down
-          const zPos = 0; // Text is flat in XY plane
+          // Add 3D depth for text extrusion effect
+          const depth = 0.4;
+          const zPos = (Math.random() - 0.5) * depth;
           
           textPixels.push({ x: xPos, y: yPos, z: zPos });
         }
@@ -656,11 +681,14 @@ export class ShapeGenerator {
         const offset = 0.02;
         const randomX = (Math.random() - 0.5) * offset;
         const randomY = (Math.random() - 0.5) * offset;
+        // Add random Z depth for 3D effect
+        const depth = 0.4;
+        const randomZ = (Math.random() - 0.5) * depth;
         
         positions.push({
           x: textPixels[index].x + randomX,
           y: textPixels[index].y + randomY,
-          z: textPixels[index].z
+          z: randomZ
         });
       }
     }
